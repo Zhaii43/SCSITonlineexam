@@ -6,21 +6,31 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@react-native-community/netinfo": "^12.0.1",
+    "axios": "^1.13.4",
+    "cli": "^1.0.1",
+    "face-api.js": "^0.22.2",
+    "lucide-react": "^0.563.0",
     "next": "16.1.6",
+    "npm": "^11.8.0",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-easy-crop": "^5.0.7",
+    "react-hook-form": "^7.71.1",
+    "verbose": "^0.2.3"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "5.9.3"
   }
 }

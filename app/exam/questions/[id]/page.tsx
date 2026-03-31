@@ -1,0 +1,412 @@
+// app/exam/questions/[id]/page.tsx
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import InstructorShell from "@/components/InstructorShell";
+
+import { API_URL } from "@/lib/api";
+interface Question {
+  question: string;
+  type: string;
+  options?: string[];
+  correct_answer: string;
+  points: number;
+}
+
+const QUESTION_TYPES = [
+  { value: "multiple_choice", label: "Multiple Choice" },
+  { value: "identification", label: "Identification" },
+  { value: "enumeration", label: "Enumeration" },
+  { value: "essay", label: "Essay" },
+];
+
+export default function AddQuestions() {
+  const router = useRouter();
+  const params = useParams();
+  const examId = params.id;
+  
+  const [exam, setExam] = useState<any>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentQuestion, setCurrentQuestion] = useState<Question>({
+    question: "",
+    type: "multiple_choice",
+    options: ["", "", "", ""],
+    correct_answer: "",
+    points: 1,
+  });
+  const [selectedQuestionType, setSelectedQuestionType] = useState("multiple_choice");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+
+  useEffect(() => {
+    fetchExam();
+  }, [examId]);
+
+  const fetchExam = async () => {
+    const token = localStorage.getItem("access_token");
+    try {
+      const res = await fetch(`${API_URL}/exams/${examId}/detail/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setExam(data);
+        const initialType = data.question_type === "mixed" ? "multiple_choice" : data.question_type;
+        setCurrentQuestion(prev => ({ ...prev, type: initialType }));
+        setSelectedQuestionType(initialType);
+      }
+      setLoading(false);
+    } catch (err) {
+      setError("Failed to load exam");
+      setLoading(false);
+    }
+  };
+
+  const addQuestion = () => {
+    if (!currentQuestion.question || !currentQuestion.correct_answer) {
+      alert("Please fill in question and correct answer");
+      return;
+    }
+
+    const totalPoints = questions.reduce((sum, q) => sum + q.points, 0) + currentQuestion.points;
+    if (totalPoints > exam.total_points) {
+      alert(`Total points cannot exceed ${exam.total_points}`);
+      return;
+    }
+
+    setQuestions([...questions, currentQuestion]);
+    const resetType = exam.question_type === "mixed" ? "multiple_choice" : exam.question_type;
+    setCurrentQuestion({
+      question: "",
+      type: resetType,
+      options: ["", "", "", ""],
+      correct_answer: "",
+      points: 1,
+    });
+    setSelectedQuestionType(resetType);
+  };
+
+  const removeQuestion = (index: number) => {
+    setQuestions(questions.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    if (questions.length === 0) {
+      alert("Please add at least one question");
+      return;
+    }
+
+    setSaving(true);
+    const token = localStorage.getItem("access_token");
+    
+    try {
+      const res = await fetch(`${API_URL}/exams/${examId}/questions/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ questions }),
+      });
+
+      if (!res.ok) throw new Error("Failed to save questions");
+
+      router.push("/dashboard/teacher");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      alert('Please upload a CSV file');
+      return;
+    }
+
+    setImporting(true);
+    const token = localStorage.getItem("access_token");
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch(`${API_URL}/exams/${examId}/questions/import/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to import questions');
+      }
+
+      alert(`Successfully imported ${data.count} questions!`);
+      router.push("/dashboard/teacher");
+    } catch (err: any) {
+      setError(err.message);
+      alert(err.message);
+    } finally {
+      setImporting(false);
+      setShowImportModal(false);
+    }
+  };
+
+  const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 flex items-center justify-center">
+        <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-sky-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.15),transparent_50%)]" />
+      
+      <div className="relative">
+        <Header />
+        <InstructorShell>
+
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="mb-8">
+            <Link href="/dashboard/teacher" className="text-sky-600 hover:text-sky-700 font-medium">
+              ← Back to Dashboard
+            </Link>
+            <div className="flex justify-between items-center mt-4">
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900 mb-2">Add Questions</h1>
+                <p className="text-slate-600">{exam?.title} - {exam?.subject}</p>
+              </div>
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-medium flex items-center gap-2"
+              >
+                📄 Import from CSV
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
+              {error}
+            </div>
+          )}
+
+          <div className="bg-white/60 backdrop-blur-xl rounded-2xl shadow-xl border border-sky-200/50 p-6 mb-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-slate-600">Total Points Used</p>
+                <p className="text-2xl font-bold text-sky-600">{totalPoints} / {exam?.total_points}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-600">Questions Added</p>
+                <p className="text-2xl font-bold text-green-600">{questions.length}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/60 backdrop-blur-xl rounded-2xl shadow-xl border border-sky-200/50 p-6 mb-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Add New Question</h3>
+            
+            <div className="space-y-4">
+              {exam?.question_type === "mixed" && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-2">Question Type *</label>
+                  <select
+                    value={selectedQuestionType}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      setSelectedQuestionType(newType);
+                      setCurrentQuestion({
+                        ...currentQuestion,
+                        type: newType,
+                        options: newType === "multiple_choice" ? ["", "", "", ""] : undefined,
+                      });
+                    }}
+                    className="w-full px-4 py-3 border border-sky-200 rounded-xl bg-white/80 focus:ring-2 focus:ring-sky-500 text-slate-900"
+                  >
+                    {QUESTION_TYPES.map(type => (
+                      <option key={type.value} value={type.value}>{type.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-2">Question *</label>
+                <textarea
+                  value={currentQuestion.question}
+                  onChange={(e) => setCurrentQuestion({...currentQuestion, question: e.target.value})}
+                  rows={3}
+                  className="w-full px-4 py-3 border border-sky-200 rounded-xl bg-white/80 focus:ring-2 focus:ring-sky-500 text-slate-900"
+                  placeholder="Enter your question..."
+                />
+              </div>
+
+              {(exam?.question_type === "multiple_choice" || (exam?.question_type === "mixed" && selectedQuestionType === "multiple_choice")) && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-2">Options *</label>
+                  {currentQuestion.options?.map((opt, i) => (
+                    <input
+                      key={i}
+                      value={opt}
+                      onChange={(e) => {
+                        const newOpts = [...(currentQuestion.options || [])];
+                        newOpts[i] = e.target.value;
+                        setCurrentQuestion({...currentQuestion, options: newOpts});
+                      }}
+                      className="w-full px-4 py-3 border border-sky-200 rounded-xl bg-white/80 mb-2 focus:ring-2 focus:ring-sky-500 text-slate-900"
+                      placeholder={`Option ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-2">Correct Answer *</label>
+                  <input
+                    value={currentQuestion.correct_answer}
+                    onChange={(e) => setCurrentQuestion({...currentQuestion, correct_answer: e.target.value})}
+                    className="w-full px-4 py-3 border border-sky-200 rounded-xl bg-white/80 focus:ring-2 focus:ring-sky-500 text-slate-900"
+                    placeholder="Enter correct answer"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-2">Points *</label>
+                  <input
+                    type="number"
+                    value={currentQuestion.points}
+                    onChange={(e) => setCurrentQuestion({...currentQuestion, points: parseInt(e.target.value) || 0})}
+                    min="1"
+                    className="w-full px-4 py-3 border border-sky-200 rounded-xl bg-white/80 focus:ring-2 focus:ring-sky-500 text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={addQuestion}
+                className="w-full bg-sky-600 text-white py-3 rounded-xl hover:bg-sky-700 transition-all font-medium"
+              >
+                + Add Question
+              </button>
+            </div>
+          </div>
+
+          {questions.length > 0 && (
+            <div className="space-y-4 mb-6">
+              <h3 className="text-lg font-semibold text-slate-900">Questions ({questions.length})</h3>
+              {questions.map((q, i) => (
+                <div key={i} className="bg-white/60 backdrop-blur-xl rounded-2xl border border-sky-200/50 p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="font-semibold text-slate-900">{i + 1}. {q.question}</p>
+                      <p className="text-sm text-slate-600 mt-1">Type: {QUESTION_TYPES.find(t => t.value === q.type)?.label || q.type}</p>
+                      <p className="text-sm text-slate-600 mt-1">Answer: {q.correct_answer}</p>
+                      <p className="text-sm text-sky-600 mt-1">{q.points} points</p>
+                    </div>
+                    <button
+                      onClick={() => removeQuestion(i)}
+                      className="text-red-600 hover:text-red-700 font-medium"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-4">
+            <Link
+              href="/dashboard/teacher"
+              className="flex-1 px-6 py-3 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium text-center"
+            >
+              Cancel
+            </Link>
+            <button
+              onClick={handleSave}
+              disabled={saving || questions.length === 0}
+              className="flex-1 bg-gradient-to-r from-sky-500 to-blue-500 text-white py-3 rounded-xl hover:shadow-xl transition-all font-medium disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save Questions"}
+            </button>
+          </div>
+
+          {/* CSV Import Modal */}
+          {showImportModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">Import Questions from CSV</h3>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                  <h4 className="font-semibold text-blue-900 mb-2">📝 CSV Format Requirements:</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• Columns: question, type, options, correct_answer, points</li>
+                    <li>• Types: multiple_choice, identification, essay, enumeration</li>
+                    <li>• Options: Separate with | (pipe) for multiple choice</li>
+                    <li>• Example: "Paris|London|Berlin|Madrid"</li>
+                  </ul>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Select CSV File
+                  </label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleImportCSV}
+                    disabled={importing}
+                    className="w-full px-4 py-3 border border-sky-200 rounded-xl bg-white focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+
+                <div className="text-xs text-slate-500 mb-4">
+                  <p>⚠️ Warning: Importing will replace all existing questions</p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowImportModal(false)}
+                    disabled={importing}
+                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <a
+                    href="/sample_questions_template.csv"
+                    download
+                    className="flex-1 px-4 py-2 bg-sky-600 text-white rounded-xl hover:bg-sky-700 transition-all text-center"
+                  >
+                    Download Template
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+        </InstructorShell>
+        <Footer />
+      </div>
+    </div>
+  );
+}

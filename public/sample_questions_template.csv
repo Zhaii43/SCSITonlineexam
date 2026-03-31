@@ -1,0 +1,5 @@
+question,type,options,correct_answer,points
+What is the capital of France?,multiple_choice,Paris|London|Berlin|Madrid,Paris,2
+What is 2 + 2?,identification,,4,1
+Explain the concept of Object-Oriented Programming,essay,,Sample answer,10
+List three programming languages,enumeration,,Python|Java|JavaScript,5

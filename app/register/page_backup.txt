@@ -1,0 +1,1 @@
+Register page has Show/Hide toggle buttons with eye icons. Login page has been updated with simple "Show"/"Hide" text buttons.

@@ -8,8 +8,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Segoe UI", "Manrope", sans-serif;
+  --font-mono: "Consolas", "SFMono-Regular", monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,4 +23,56 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+  height: auto;
+}
+
+table {
+  width: 100%;
+}
+
+.ghost-scrollbar {
+  scrollbar-width: none;
+  scrollbar-color: transparent transparent;
+}
+
+.ghost-scrollbar:hover {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+
+.ghost-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.ghost-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ghost-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+}
+
+.ghost-scrollbar:hover::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.ghost-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: rgba(203, 213, 225, 0.55);
 }
