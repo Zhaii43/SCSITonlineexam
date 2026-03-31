@@ -1,5 +1,34 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
-export const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "";
+const DEFAULT_FRONTEND_HOST = "scsi-tonlineexam.vercel.app";
+const DEFAULT_API_BASE_URL = "https://scsitonlineexambackend.onrender.com";
+
+function resolveApiBaseUrl() {
+  const envBaseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, "");
+
+  if (envBaseUrl) {
+    return envBaseUrl.replace(/\/+$/, "");
+  }
+
+  if (typeof window !== "undefined" && window.location.hostname === DEFAULT_FRONTEND_HOST) {
+    return DEFAULT_API_BASE_URL;
+  }
+
+  return DEFAULT_API_BASE_URL;
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
+export const API_URL = `${API_BASE_URL}/api`;
+export const WS_URL =
+  process.env.NEXT_PUBLIC_WS_URL ?? "wss://scsitonlineexambackend.onrender.com";
+
+export function apiUrl(path: string) {
+  if (!path.startsWith("/")) {
+    return `${API_BASE_URL}/${path}`;
+  }
+
+  return `${API_BASE_URL}${path}`;
+}
 
 /**
  * Wrapper around fetch that automatically refreshes the access token

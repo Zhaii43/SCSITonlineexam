@@ -218,7 +218,7 @@ export default function About() {
             </div>
 
             <div className="relative">
-              <div className="relative rounded-3xl overflow-hidden shadow-sm border border-slate-200 bg-white">
+              <div className="relative rounded-3xl overflow-hidden shadow-sm bordxer border-slate-200 bg-white">
                 <Image
                   src="/logo1.jpg"
                   alt="SCSIT Campus"
