@@ -786,18 +786,18 @@ export default function TakeExam() {
             {extensionToast}
           </div>
         )}
-        <div className="bg-white/60 backdrop-blur-xl border-b border-sky-200/50 px-6 py-4 flex items-center justify-between shadow-lg">
-          <div className="flex items-center gap-4">
-            <div className="text-xl font-bold text-slate-900">Exam in Progress</div>
-            <div className={`px-3 py-1 rounded-full text-sm font-semibold ${cameraActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+        <div className="bg-white/60 backdrop-blur-xl border-b border-sky-200/50 px-4 py-4 shadow-lg sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+            <div className="text-2xl font-bold leading-tight text-slate-900 sm:text-xl">Exam in Progress</div>
+            <div className={`inline-flex w-fit px-3 py-1 rounded-full text-sm font-semibold ${cameraActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
               📹 {cameraActive ? "Camera Active" : "Camera Inactive"}
             </div>
-            <div className={`px-3 py-1 rounded-full text-sm font-semibold ${faceDetected ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+            <div className={`inline-flex w-fit px-3 py-1 rounded-full text-sm font-semibold ${faceDetected ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
               {faceDetected ? "✓ Face Detected" : "⚠ Face Not Clear"}
             </div>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700">
+          <div className="mt-3 flex flex-wrap items-center gap-3 sm:mt-0 sm:gap-4">
+            <div className="inline-flex w-fit px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700">
               Server Connected
             </div>
             
@@ -808,11 +808,11 @@ export default function TakeExam() {
           </div>
         </div>
 
-        <div className="flex h-[calc(100vh-73px)]">
-          <div className="flex-1 overflow-y-auto p-6 select-none">
-            <div className="max-w-4xl mx-auto">
+        <div className="flex flex-col lg:h-[calc(100vh-73px)] lg:flex-row">
+          <div className="order-2 flex-1 overflow-y-auto p-4 select-none sm:p-6 lg:order-1">
+            <div className="mx-auto max-w-4xl">
               <div className="bg-white/60 backdrop-blur-xl rounded-2xl shadow-xl border border-sky-200/50 p-6 mb-6">
-                <h1 className="text-2xl font-bold text-slate-900 mb-4">{exam?.title}</h1>
+                <h1 className="mb-4 text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">{exam?.title}</h1>
                 <p className="text-slate-600 mb-6">{exam?.subject}</p>
                 
                 {!examStarted ? (
@@ -858,10 +858,10 @@ export default function TakeExam() {
                 ) : (
                   <div className="space-y-6">
                     {exam?.questions?.map((question: any, index: number) => (
-                      <div key={question.id} className="bg-sky-50 border border-sky-200 rounded-xl p-6">
-                        <div className="flex justify-between items-start mb-3">
+                      <div key={question.id} className="bg-sky-50 border border-sky-200 rounded-xl p-4 sm:p-6">
+                        <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:justify-between sm:items-start">
                           <h3 className="font-bold text-slate-900">Question {index + 1}</h3>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <button
                               type="button"
                               onClick={() => setQuestionToReport({ ...question, order: index + 1 })}
@@ -877,7 +877,7 @@ export default function TakeExam() {
                         {question.type === 'multiple_choice' && question.options && (
                           <div className="space-y-2">
                             {question.options.map((option: string, optIndex: number) => (
-                              <label key={optIndex} className="flex items-center gap-3 p-3 bg-white border border-sky-200 rounded-lg cursor-pointer hover:bg-sky-50">
+                              <label key={optIndex} className="flex items-start gap-3 p-3 bg-white border border-sky-200 rounded-lg cursor-pointer hover:bg-sky-50">
                                 <input
                                   type="radio"
                                   name={`q${question.id}`}
@@ -886,7 +886,7 @@ export default function TakeExam() {
                                   onChange={(e) => setAnswers(prev => ({ ...prev, [question.id]: e.target.value }))}
                                   className="w-4 h-4 text-sky-600"
                                 />
-                                <span className="text-slate-900">{option}</span>
+                                <span className="text-slate-900 break-words">{option}</span>
                               </label>
                             ))}
                           </div>
@@ -912,11 +912,11 @@ export default function TakeExam() {
             </div>
           </div>
 
-          <div className="w-80 bg-white/60 backdrop-blur-xl border-l border-sky-200/50 p-4 overflow-y-auto shadow-lg">
+          <div className="order-1 border-b border-sky-200/50 bg-white/70 p-4 shadow-lg backdrop-blur-xl lg:order-2 lg:w-80 lg:overflow-y-auto lg:border-b-0 lg:border-l">
             <div className="mb-6">
               <h3 className="font-bold text-slate-900 mb-3">Live Monitoring</h3>
               <div className="relative bg-slate-100 rounded-lg overflow-hidden border border-sky-200">
-                <video ref={videoRef} autoPlay muted className="w-full h-48 object-cover" />
+                <video ref={videoRef} autoPlay muted className="aspect-video w-full object-cover lg:h-48 lg:aspect-auto" />
                 <canvas ref={canvasRef} className="hidden" />
                 <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
               </div>
@@ -925,7 +925,7 @@ export default function TakeExam() {
             
             <div>
               <h3 className="font-bold text-slate-900 mb-3">Activity Log</h3>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
+              <div className="space-y-2 max-h-48 overflow-y-auto lg:max-h-96">
                 {warnings.length === 0 ? (
                   <p className="text-sm text-slate-600">No violations detected</p>
                 ) : (
