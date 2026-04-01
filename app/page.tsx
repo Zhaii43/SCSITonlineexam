@@ -50,6 +50,7 @@ export default function Home() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [stats, setStats] = useState<{
     active_exams: number;
+    total_exams: number;
     total_users: number;
     violations_today: number;
     live_exam: {
@@ -106,6 +107,13 @@ export default function Home() {
     }
     setShowActivityModal(true);
   };
+
+  const landingStats = [
+    { value: String(stats?.total_exams ?? 0), label: "Approved Exams", icon: "📋" },
+    { value: String(stats?.active_exams ?? 0), label: "Active Exams", icon: "⚡" },
+    { value: String(stats?.total_users ?? 0), label: "Registered Students", icon: "👥" },
+    { value: "24/7", label: "Support Available", icon: "🛟" },
+  ];
 
   return (
     <div
@@ -270,12 +278,7 @@ export default function Home() {
         {/* ── STATS STRIP ── */}
         <section className="py-5 px-5 sm:px-8 lg:px-12 max-w-6xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { value: "5,000+", label: "Exams Conducted", icon: "📋" },
-              { value: "99.9%", label: "Uptime Guarantee", icon: "⚡" },
-              { value: "100+", label: "Active Users", icon: "👥" },
-              { value: "24/7", label: "Support Available", icon: "🛟" },
-            ].map((s) => (
+            {landingStats.map((s) => (
               <div key={s.label} className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm transition-all hover:-translate-y-0.5">
                 <div className="text-2xl mb-1">{s.icon}</div>
                 <div className="text-3xl font-semibold text-slate-900">{s.value}</div>
@@ -283,6 +286,25 @@ export default function Home() {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* Legacy hardcoded stats strip retained only to avoid encoding churn in this file. */}
+        <section className="hidden py-5 px-5 sm:px-8 lg:px-12 max-w-6xl mx-auto">
+          {/*
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {landingStats.map((s) => (
+              { value: "5,000+", label: "Exams Conducted", icon: "📋" },
+              { value: "99.9%", label: "Uptime Guarantee", icon: "⚡" },
+              { value: "100+", label: "Active Users", icon: "👥" },
+              { value: "24/7", label: "Support Available", icon: "🛟" },
+              <div key={s.label} className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm transition-all hover:-translate-y-0.5">
+                <div className="text-2xl mb-1">{s.icon}</div>
+                <div className="text-3xl font-semibold text-slate-900">{s.value}</div>
+                <p className="text-slate-500 text-xs mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+          */}
         </section>
 
         {/* ── FEATURES ── */}

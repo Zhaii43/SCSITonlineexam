@@ -11,7 +11,7 @@ export async function GET() {
     const contentType = res.headers.get("content-type") ?? "";
     if (!res.ok || !contentType.includes("application/json")) {
       return NextResponse.json(
-        { active_exams: 0, total_users: 0, violations_today: 0, live_exam: null, activity: [] },
+        { active_exams: 0, total_exams: 0, total_users: 0, violations_today: 0, live_exam: null, activity: [] },
         { status: 200 }
       );
     }
@@ -20,7 +20,7 @@ export async function GET() {
     return NextResponse.json(data);
   } catch {
     return NextResponse.json(
-      { active_exams: 0, total_users: 0, violations_today: 0, live_exam: null, activity: [] },
+      { active_exams: 0, total_exams: 0, total_users: 0, violations_today: 0, live_exam: null, activity: [] },
       { status: 200 }
     );
   }
