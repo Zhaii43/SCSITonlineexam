@@ -703,7 +703,23 @@ export default function TakeExam() {
         },
         body: JSON.stringify({ answers, session_token: sessionTokenRef.current }),
       });
-      if (!res.ok) throw new Error("Failed to submit");
+
+      if (!res.ok) {
+        let errorMessage = "Failed to submit exam.";
+
+        try {
+          const errorData = await res.json();
+          if (typeof errorData?.error === "string" && errorData.error.trim()) {
+            errorMessage = errorData.error;
+          } else if (typeof errorData?.detail === "string" && errorData.detail.trim()) {
+            errorMessage = errorData.detail;
+          } else if (typeof errorData?.message === "string" && errorData.message.trim()) {
+            errorMessage = errorData.message;
+          }
+        } catch {}
+
+        throw new Error(errorMessage);
+      }
       
       const result = await res.json();
       console.log("Submission result:", result);
@@ -729,8 +745,22 @@ export default function TakeExam() {
       router.push("/dashboard/student");
     } catch (err) {
       console.error("Submission error:", err);
-      enqueuePendingSubmission();
-      alert("Failed to submit exam. Your answers are saved locally and will be submitted automatically when the connection is restored.");
+
+      const isOfflineFailure =
+        !navigator.onLine ||
+        err instanceof TypeError;
+
+      if (isOfflineFailure) {
+        enqueuePendingSubmission();
+        alert("Connection lost. Your answers are saved locally and will be submitted automatically when the connection is restored.");
+      } else {
+        const message =
+          err instanceof Error && err.message
+            ? err.message
+            : "Failed to submit exam.";
+        alert(message);
+      }
+
       setSubmitting(false);
       examStartedRef.current = true;
     }
