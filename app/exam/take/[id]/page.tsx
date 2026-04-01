@@ -31,8 +31,6 @@ export default function TakeExam() {
   const [terminationBlocked, setTerminationBlocked] = useState(false);
   const [terminationProcessing, setTerminationProcessing] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
-  const [showOfflineBanner, setShowOfflineBanner] = useState(false);
-  const [pendingSubmission, setPendingSubmission] = useState(false);
   const [extensionToast, setExtensionToast] = useState<string | null>(null);
   const [questionToReport, setQuestionToReport] = useState<any>(null);
   const lastWarningRef = useRef<{ message: string; time: number } | null>(null);
@@ -143,12 +141,6 @@ export default function TakeExam() {
     }
   }, [examStarted, timeLeft]);
 
-  useEffect(() => {
-    if (examStarted && Object.keys(answers).length > 0) {
-      saveAnswersLocally();
-    }
-  }, [answers]);
-
   const fetchExam = async () => {
     const token = localStorage.getItem("access_token");
     try {
@@ -169,14 +161,6 @@ export default function TakeExam() {
       setTimeLeft(data.duration_minutes * 60);
       appliedExtraMinutesRef.current = 0;
       await fetchAndApplyExtensions();
-      await loadSavedAnswers();
-      const pending = localStorage.getItem(pendingKey());
-      if (pending) {
-        setPendingSubmission(true);
-        if (navigator.onLine) {
-          retrySubmission();
-        }
-      }
       setLoading(false);
     } catch (err) {
       alert("Failed to load exam");
@@ -211,26 +195,8 @@ export default function TakeExam() {
   };
 
   const setupNetworkMonitoring = () => {
-    const updateStatus = (online: boolean) => {
-      setIsOnline(online);
-      setShowOfflineBanner(!online);
-      if (online && pendingSubmission) {
-        retrySubmission();
-      }
-    };
-
-    updateStatus(navigator.onLine);
-
-    const handleOnline = () => updateStatus(true);
-    const handleOffline = () => updateStatus(false);
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
+    setIsOnline(true);
+    return () => {};
   };
 
   const storageKey = () => `exam_${examId}_answers`;
@@ -276,71 +242,19 @@ export default function TakeExam() {
   };
 
   const startAutoSave = () => {
-    autoSaveInterval.current = setInterval(() => {
-      if (examStartedRef.current && Object.keys(answers).length > 0) {
-        saveAnswersLocally();
-      }
-    }, 30000);
+    if (autoSaveInterval.current) clearInterval(autoSaveInterval.current);
   };
 
   const enqueuePendingSubmission = () => {
-    try {
-      localStorage.setItem(pendingKey(), JSON.stringify({ answers, timestamp: Date.now() }));
-      setPendingSubmission(true);
-    } catch (err) {
-      console.error("Failed to store pending submission:", err);
-    }
+    return;
   };
 
   const clearPendingSubmission = () => {
-    try {
-      localStorage.removeItem(pendingKey());
-      setPendingSubmission(false);
-    } catch (err) {
-      console.error("Failed to clear pending submission:", err);
-    }
+    return;
   };
 
   const retrySubmission = async () => {
-    if (submitting) return;
-    const token = localStorage.getItem("access_token");
-    const pending = localStorage.getItem(pendingKey());
-    if (!pending || !token) return;
-    setSubmitting(true);
-    try {
-      const { answers: pendingAnswers } = JSON.parse(pending);
-      const res = await fetch(`${API_URL}/exams/${examId}/submit/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          ...(sessionTokenRef.current ? { "X-Exam-Session": sessionTokenRef.current } : {}),
-        },
-        body: JSON.stringify({ answers: pendingAnswers, session_token: sessionTokenRef.current }),
-      });
-      if (!res.ok) throw new Error("Failed to submit");
-
-      const result = await res.json();
-      clearPendingSubmission();
-      clearSavedAnswers();
-      sessionStorage.removeItem(sessionKey());
-      sessionTokenRef.current = null;
-
-      if (document.fullscreenElement) {
-        await document.exitFullscreen().catch(() => {});
-      }
-
-      if (result.needs_manual_grading) {
-        alert("Exam submitted successfully!\n\nYour exam contains essay/enumeration questions that require manual grading by your instructor.\nYour results will be available once grading is complete.");
-      } else {
-        alert(`Exam submitted successfully!\nScore: ${result.score}/${result.total_points}\nGrade: ${result.grade}`);
-      }
-      router.push("/dashboard/student");
-    } catch (err) {
-      console.error("Retry submission failed:", err);
-      setSubmitting(false);
-      examStartedRef.current = true;
-    }
+    return;
   };
 
   const loadFaceModels = async () => {
@@ -680,14 +594,6 @@ export default function TakeExam() {
     if (heartbeatRef.current) clearInterval(heartbeatRef.current);
     const token = localStorage.getItem("access_token");
 
-    if (!navigator.onLine) {
-      enqueuePendingSubmission();
-      alert("Connection lost. Your answers are saved locally and will be submitted automatically when the connection is restored.");
-      setSubmitting(false);
-      examStartedRef.current = true;
-      return;
-    }
-    
     console.log("=== SUBMITTING EXAM ===");
     console.log("Answers being submitted:", answers);
     console.log("Number of answers:", Object.keys(answers).length);
@@ -724,7 +630,6 @@ export default function TakeExam() {
       const result = await res.json();
       console.log("Submission result:", result);
 
-      clearPendingSubmission();
       clearSavedAnswers();
       sessionStorage.removeItem(sessionKey());
       sessionTokenRef.current = null;
@@ -745,21 +650,11 @@ export default function TakeExam() {
       router.push("/dashboard/student");
     } catch (err) {
       console.error("Submission error:", err);
-
-      const isOfflineFailure =
-        !navigator.onLine ||
-        err instanceof TypeError;
-
-      if (isOfflineFailure) {
-        enqueuePendingSubmission();
-        alert("Connection lost. Your answers are saved locally and will be submitted automatically when the connection is restored.");
-      } else {
-        const message =
-          err instanceof Error && err.message
-            ? err.message
-            : "Failed to submit exam.";
-        alert(message);
-      }
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : "Unable to reach the exam server. Please check your connection and try submitting again.";
+      alert(message);
 
       setSubmitting(false);
       examStartedRef.current = true;
@@ -825,12 +720,6 @@ export default function TakeExam() {
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.15),transparent_50%)]" />
       <div className="relative">
-        {showOfflineBanner && (
-          <div className="bg-red-50 border-b border-red-200 px-6 py-3 text-red-700 flex items-center gap-3">
-            <span className="font-bold">Connection lost</span>
-            <span className="text-sm">Your answers are being saved locally.</span>
-          </div>
-        )}
         {examStarted && terminationCount > 0 && (
           <div className="bg-orange-50 border-b border-orange-300 px-6 py-3 text-orange-800 flex items-center gap-3">
             <span className="text-lg">⚠️</span>
@@ -859,14 +748,10 @@ export default function TakeExam() {
             </div>
           </div>
           <div className="flex items-center gap-6">
-            <div className={`px-3 py-1 rounded-full text-sm font-semibold ${isOnline ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-              {isOnline ? "🌐 Online" : "📡 Offline"}
+            <div className="px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700">
+              Server Connected
             </div>
-            {pendingSubmission && (
-              <div className="px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-700">
-                Pending submission
-              </div>
-            )}
+            
             <div className="text-2xl font-bold text-sky-600">⏱️ {formatTime(timeLeft)}</div>
             <div className={`px-3 py-1 rounded-full text-sm font-semibold ${warningCount === 0 ? "bg-green-100 text-green-700" : warningCount < 3 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`}>
               ⚠️ Warnings: {warningCount}/5
