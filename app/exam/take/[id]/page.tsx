@@ -20,6 +20,7 @@ export default function TakeExam() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [warningCount, setWarningCount] = useState(0);
   const [examStarted, setExamStarted] = useState(false);
@@ -271,6 +272,7 @@ export default function TakeExam() {
 
   const initCamera = async () => {
     try {
+      setCameraError(null);
       if (!window.isSecureContext) {
         throw new Error("Camera access requires HTTPS.");
       }
@@ -323,6 +325,7 @@ export default function TakeExam() {
           : err instanceof Error
             ? err.message
             : "Unable to start the camera. Please reload the exam page.";
+      setCameraError(message);
       alert(message);
     }
   };
@@ -590,8 +593,21 @@ export default function TakeExam() {
   };
 
   const handleStartExam = async () => {
-    if (!cameraActive) {
-      alert("Camera is not ready yet. Please allow camera access and wait for the preview before starting the exam.");
+    const video = videoRef.current;
+    const stream = video?.srcObject as MediaStream | null;
+    const hasLiveVideo =
+      !!video &&
+      !!stream &&
+      stream.getVideoTracks().some((track) => track.readyState === "live" && track.enabled) &&
+      video.readyState >= 2 &&
+      video.videoWidth > 0 &&
+      video.videoHeight > 0;
+
+    if (!cameraActive || !hasLiveVideo) {
+      alert(
+        cameraError ||
+          "Camera is required before you can take this exam. Please allow camera access and wait for the preview to load."
+      );
       return;
     }
 
@@ -826,7 +842,16 @@ export default function TakeExam() {
                         <li>• 5 violations = automatic termination</li>
                       </ul>
                     </div>
-                    <button onClick={handleStartExam} className="bg-gradient-to-r from-sky-500 to-blue-500 text-white px-8 py-4 rounded-xl hover:shadow-xl font-bold text-lg">
+                    {!cameraActive && (
+                      <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        {cameraError || "Camera access is required. Turn on your camera before starting the exam."}
+                      </div>
+                    )}
+                    <button
+                      onClick={handleStartExam}
+                      disabled={!cameraActive}
+                      className="bg-gradient-to-r from-sky-500 to-blue-500 text-white px-8 py-4 rounded-xl hover:shadow-xl font-bold text-lg disabled:cursor-not-allowed disabled:opacity-60"
+                    >
                       Start Exam Now
                     </button>
                   </div>
