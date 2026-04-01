@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import * as faceapi from "face-api.js";
 import ReportIssueModal from "@/components/ReportIssueModal";
 
-import { API_URL } from "@/lib/api";
+import { API_URL, apiFetch } from "@/lib/api";
 export default function TakeExam() {
   const router = useRouter();
   const params = useParams();
@@ -50,6 +50,16 @@ export default function TakeExam() {
   const NO_FACE_VIOLATION_DELAY_MS = 5000;
   const NO_FACE_REPEAT_DELAY_MS = 5000;
   const MULTIPLE_FACE_VIOLATION_THRESHOLD = 2;
+
+  const readErrorMessage = async (res: Response, fallback: string) => {
+    try {
+      const data = await res.json();
+      if (typeof data?.error === "string" && data.error.trim()) return data.error;
+      if (typeof data?.detail === "string" && data.detail.trim()) return data.detail;
+      if (typeof data?.message === "string" && data.message.trim()) return data.message;
+    } catch {}
+    return fallback;
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -142,17 +152,15 @@ export default function TakeExam() {
   }, [examStarted, timeLeft]);
 
   const fetchExam = async () => {
-    const token = localStorage.getItem("access_token");
     try {
-      const res = await fetch(`${API_URL}/exams/${examId}/take/`, {
+      const res = await apiFetch(`${API_URL}/exams/${examId}/take/`, {
         headers: {
-          Authorization: `Bearer ${token}`,
           ...(sessionTokenRef.current ? { "X-Exam-Session": sessionTokenRef.current } : {}),
         },
       });
       if (!res.ok) {
-        const error = await res.json();
-        alert(error.error || "Failed to load exam");
+        const message = await readErrorMessage(res, "Failed to load exam.");
+        alert(message);
         router.push("/dashboard/student");
         return;
       }
@@ -163,17 +171,15 @@ export default function TakeExam() {
       await fetchAndApplyExtensions();
       setLoading(false);
     } catch (err) {
-      alert("Failed to load exam");
+      alert("Unable to reach the exam server. Please check your connection and refresh the page.");
       router.push("/dashboard/student");
     }
   };
 
   const fetchAndApplyExtensions = async () => {
-    const token = localStorage.getItem("access_token");
-    if (!token) return;
     try {
-      const res = await fetch(`${API_URL}/exams/${examId}/my-extensions/`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await apiFetch(`${API_URL}/exams/${examId}/my-extensions/`, {
+        headers: {},
       });
       if (!res.ok) return;
       const data = await res.json();
@@ -265,16 +271,59 @@ export default function TakeExam() {
 
   const initCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setCameraActive(true);
-        await loadFaceModels();
-        faceDetectionIntervalRef.current = setInterval(() => detectFace(), FACE_SCAN_INTERVAL_MS);
+      if (!window.isSecureContext) {
+        throw new Error("Camera access requires HTTPS.");
       }
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("This browser does not support camera access.");
+      }
+
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "user" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
+
+      if (!videoRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        throw new Error("Camera preview is not ready yet.");
+      }
+
+      videoRef.current.srcObject = stream;
+      videoRef.current.muted = true;
+      videoRef.current.playsInline = true;
+      await videoRef.current.play().catch(() => {});
+
+      setCameraActive(true);
+      await loadFaceModels();
+      faceDetectionIntervalRef.current = setInterval(() => detectFace(), FACE_SCAN_INTERVAL_MS);
     } catch (err) {
-      alert("Camera permission required");
-      router.push("/dashboard/student");
+      setCameraActive(false);
+      const message =
+        err instanceof DOMException
+          ? err.name === "NotAllowedError"
+            ? "Camera access was blocked. Please allow camera permission in your browser and reload the exam page."
+            : err.name === "NotFoundError"
+              ? "No camera device was found. Please connect a camera and reload the exam page."
+              : err.name === "NotReadableError"
+                ? "Your camera is already in use by another app. Close other camera apps and reload the exam page."
+                : "Unable to start the camera. Please reload the exam page."
+          : err instanceof Error
+            ? err.message
+            : "Unable to start the camera. Please reload the exam page.";
+      alert(message);
     }
   };
 
@@ -521,13 +570,11 @@ export default function TakeExam() {
     ctx.drawImage(video, 0, 0);
     const photoData = canvas.toDataURL('image/jpeg', 0.8);
     
-    const token = localStorage.getItem("access_token");
     try {
-      await fetch(`${API_URL}/exams/${examId}/capture-photo/`, {
+      await apiFetch(`${API_URL}/exams/${examId}/capture-photo/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
           ...(sessionTokenRef.current ? { "X-Exam-Session": sessionTokenRef.current } : {}),
         },
         body: JSON.stringify({ 
@@ -543,18 +590,21 @@ export default function TakeExam() {
   };
 
   const handleStartExam = async () => {
-    const token = localStorage.getItem("access_token");
+    if (!cameraActive) {
+      alert("Camera is not ready yet. Please allow camera access and wait for the preview before starting the exam.");
+      return;
+    }
+
     try {
-      const res = await fetch(`${API_URL}/exams/${examId}/session/start/`, {
+      const res = await apiFetch(`${API_URL}/exams/${examId}/session/start/`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
           ...(sessionTokenRef.current ? { "X-Exam-Session": sessionTokenRef.current } : {}),
         },
       });
       if (!res.ok) {
-        const err = await res.json();
-        alert(err.error || "Failed to start exam session");
+        const message = await readErrorMessage(res, "Failed to start exam session.");
+        alert(message);
         return;
       }
       const data = await res.json();
@@ -563,7 +613,7 @@ export default function TakeExam() {
         sessionStorage.setItem(sessionKey(), data.session_token);
       }
     } catch {
-      alert("Failed to start exam session. Please check your connection.");
+      alert("Unable to reach the exam server. Please check your connection and try again.");
       return;
     }
     setExamStarted(true);
@@ -572,12 +622,10 @@ export default function TakeExam() {
     capturePhoto('start');
     // Send heartbeat every 30 seconds
     heartbeatRef.current = setInterval(async () => {
-      const t = localStorage.getItem("access_token");
       try {
-        await fetch(`${API_URL}/exams/${examId}/session/heartbeat/`, {
+        await apiFetch(`${API_URL}/exams/${examId}/session/heartbeat/`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${t}`,
             "Content-Type": "application/json",
             ...(sessionTokenRef.current ? { "X-Exam-Session": sessionTokenRef.current } : {}),
           },
@@ -592,38 +640,23 @@ export default function TakeExam() {
     setSubmitting(true);
     examStartedRef.current = false;
     if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-    const token = localStorage.getItem("access_token");
-
     console.log("=== SUBMITTING EXAM ===");
     console.log("Answers being submitted:", answers);
     console.log("Number of answers:", Object.keys(answers).length);
     console.log("=== END ===");
     
     try {
-      const res = await fetch(`${API_URL}/exams/${examId}/submit/`, {
+      const res = await apiFetch(`${API_URL}/exams/${examId}/submit/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
           ...(sessionTokenRef.current ? { "X-Exam-Session": sessionTokenRef.current } : {}),
         },
         body: JSON.stringify({ answers, session_token: sessionTokenRef.current }),
       });
 
       if (!res.ok) {
-        let errorMessage = "Failed to submit exam.";
-
-        try {
-          const errorData = await res.json();
-          if (typeof errorData?.error === "string" && errorData.error.trim()) {
-            errorMessage = errorData.error;
-          } else if (typeof errorData?.detail === "string" && errorData.detail.trim()) {
-            errorMessage = errorData.detail;
-          } else if (typeof errorData?.message === "string" && errorData.message.trim()) {
-            errorMessage = errorData.message;
-          }
-        } catch {}
-
+        const errorMessage = await readErrorMessage(res, "Failed to submit exam.");
         throw new Error(errorMessage);
       }
       
