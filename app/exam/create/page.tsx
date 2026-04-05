@@ -8,7 +8,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import RoleShell from "@/components/RoleShell";
 
-import { API_URL } from "@/lib/api";
+import { API_URL, apiFetch } from "@/lib/api";
 export default function CreateExam() {
   const router = useRouter();
   const [role, setRole] = useState<"" | "instructor" | "dean">("");
@@ -112,11 +112,10 @@ export default function CreateExam() {
         sample_questions: null,
       };
 
-      const res = await fetch(`${API_URL}/exams/create/`, {
+      const res = await apiFetch(`${API_URL}/exams/create/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(examData),
       });
