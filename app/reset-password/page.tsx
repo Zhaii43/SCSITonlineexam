@@ -6,7 +6,6 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
-import { API_URL } from "@/lib/api";
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -38,7 +37,7 @@ function ResetPasswordForm() {
 
   const validateToken = async () => {
     try {
-      const res = await fetch(`${API_URL}/password-reset/validate/`, {
+      const res = await fetch(`/api/password-reset/validate/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),
@@ -73,7 +72,7 @@ function ResetPasswordForm() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/password-reset/reset/`, {
+      const res = await fetch(`/api/password-reset/reset/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, new_password: password }),

@@ -6,7 +6,6 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
-import { API_URL } from "@/lib/api";
 type Step = 1 | 2 | 3;
 
 export default function ForgotPassword() {
@@ -37,7 +36,7 @@ export default function ForgotPassword() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/password-reset/request/`, {
+      const res = await fetch(`/api/password-reset/request/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -58,7 +57,7 @@ export default function ForgotPassword() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/password-reset/verify-code/`, {
+      const res = await fetch(`/api/password-reset/verify-code/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code }),
@@ -83,7 +82,7 @@ export default function ForgotPassword() {
     if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/password-reset/reset/`, {
+      const res = await fetch(`/api/password-reset/reset/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, new_password: password }),
