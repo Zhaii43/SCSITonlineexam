@@ -150,7 +150,7 @@ export default function ProfileSettings() {
 
       if (emailChanged) {
         setEmailChange((prev) => ({ ...prev, sending: true, message: "" }));
-        const emailRes = await fetch(`${API_URL}/profile/email-change/request/`, {
+        const emailRes = await fetch(`/api/profile/email-change/request/`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -229,7 +229,7 @@ export default function ProfileSettings() {
     const token = localStorage.getItem("access_token");
     setEmailChange((prev) => ({ ...prev, verifying: true, message: "" }));
     try {
-      const res = await fetch(`${API_URL}/profile/email-change/verify/`, {
+      const res = await fetch(`/api/profile/email-change/verify/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -263,7 +263,7 @@ export default function ProfileSettings() {
     const token = localStorage.getItem("access_token");
     setEmailChange((prev) => ({ ...prev, sending: true, message: "" }));
     try {
-      const res = await fetch(`${API_URL}/profile/email-change/resend/`, {
+      const res = await fetch(`/api/profile/email-change/resend/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
