@@ -64,7 +64,7 @@ export default function AddQuestions() {
   }, []);
 
   const dashboardHref = role === "dean" ? "/dashboard/dean" : "/dashboard/teacher";
-  const examDetailsHref = `/exam/${examId}/edit`;
+  const examDetailsHref = `/exam/create?examId=${examId}`;
 
   const fetchExam = useCallback(async () => {
     const token = localStorage.getItem("access_token");
@@ -400,12 +400,12 @@ export default function AddQuestions() {
                 <h3 className="text-2xl font-bold text-slate-900 mb-4">Import Questions from CSV</h3>
                 
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-                  <h4 className="font-semibold text-blue-900 mb-2">📝 CSV Format Requirements:</h4>
+                  <h4 className="font-semibold text-blue-900 mb-2">CSV Format Requirements:</h4>
                   <ul className="text-sm text-blue-800 space-y-1">
-                    <li>• Columns: question, type, options, correct_answer, points</li>
-                    <li>• Types: multiple_choice, identification, essay, enumeration</li>
-                    <li>• Options: Separate with | (pipe) for multiple choice</li>
-                    <li>• Example: "Paris|London|Berlin|Madrid"</li>
+                    <li>- Columns: question, type, options, correct_answer, points</li>
+                    <li>- Types: multiple_choice, identification, essay, enumeration</li>
+                    <li>- Options: Separate with | (pipe) for multiple choice</li>
+                    <li>- Example: &quot;Paris|London|Berlin|Madrid&quot;</li>
                   </ul>
                 </div>
 

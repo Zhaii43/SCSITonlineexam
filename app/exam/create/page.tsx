@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -11,7 +11,11 @@ import RoleShell from "@/components/RoleShell";
 import { API_URL, apiFetch } from "@/lib/api";
 export default function CreateExam() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const examIdParam = searchParams.get("examId");
+  const editingExamId = examIdParam ? Number(examIdParam) : null;
   const [role, setRole] = useState<"" | "instructor" | "dean">("");
+  const [initialLoading, setInitialLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -47,6 +51,59 @@ export default function CreateExam() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (!editingExamId) return;
+
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    const loadExam = async () => {
+      setInitialLoading(true);
+      try {
+        const res = await apiFetch(`${API_URL}/exams/${editingExamId}/detail/`);
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data) {
+          throw new Error(data?.error || data?.detail || "Failed to load exam details");
+        }
+
+        const scheduled = data.scheduled_date ? new Date(data.scheduled_date) : null;
+        const expiration = data.expiration_time ? new Date(data.expiration_time) : null;
+        const yearLevels = typeof data.year_level === "string"
+          ? data.year_level.split(",").map((value: string) => value.trim()).filter(Boolean)
+          : [];
+
+        setExamId(data.id);
+        setFormData({
+          title: data.title || "",
+          subject: data.subject || "",
+          department: data.department || "",
+          exam_type: data.exam_type || "quiz",
+          question_type: data.question_type || "multiple_choice",
+          scheduled_date: scheduled ? scheduled.toISOString().slice(0, 10) : "",
+          scheduled_time: scheduled ? scheduled.toTimeString().slice(0, 5) : "",
+          expiration_date: expiration ? expiration.toISOString().slice(0, 10) : "",
+          expiration_time: expiration ? expiration.toTimeString().slice(0, 5) : "",
+          duration_minutes: String(data.duration_minutes ?? ""),
+          total_points: String(data.total_points ?? ""),
+          passing_score: String(data.passing_score ?? ""),
+          instructions: data.instructions || "",
+          year_level: yearLevels,
+          is_practice: data.exam_type === "practice",
+          max_attempts: String(data.max_attempts ?? 1),
+          retake_policy: data.retake_policy || "none",
+          question_pool_size: String(data.question_pool_size ?? 0),
+          shuffle_options: Boolean(data.shuffle_options),
+        });
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to load exam details");
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadExam();
+  }, [editingExamId]);
 
   const dashboardHref = role === "dean" ? "/dashboard/dean" : "/dashboard/teacher";
   const isDean = role === "dean";
@@ -112,8 +169,11 @@ export default function CreateExam() {
         sample_questions: null,
       };
 
-      const res = await apiFetch(`${API_URL}/exams/create/`, {
-        method: "POST",
+      const targetUrl = editingExamId
+        ? `${API_URL}/exams/${editingExamId}/update/`
+        : `${API_URL}/exams/create/`;
+      const res = await apiFetch(targetUrl, {
+        method: editingExamId ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
         },
@@ -126,23 +186,33 @@ export default function CreateExam() {
           data?.error ||
           data?.detail ||
           data?.message ||
-          `Failed to create exam (${res.status})`
+          `Failed to ${editingExamId ? "update" : "create"} exam (${res.status})`
         );
       }
 
       const data = await res.json();
-      setExamId(data.exam_id);
+      setExamId(editingExamId ?? data.exam_id);
       setSuccess(true);
     } catch (err: unknown) {
       if (err instanceof TypeError) {
         setError("Failed to reach the server. Please check your connection and API configuration.");
       } else {
-        setError(err instanceof Error ? err.message : "Failed to create exam");
+        setError(err instanceof Error ? err.message : `Failed to ${editingExamId ? "update" : "create"} exam`);
       }
     } finally {
       setLoading(false);
     }
   };
+
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-sky-100 bg-[radial-gradient(circle_at_20%_10%,rgba(14,165,233,0.18),transparent_55%),radial-gradient(circle_at_80%_0%,rgba(249,115,22,0.12),transparent_45%)] flex items-center justify-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white shadow-xl shadow-slate-200/70 border border-slate-200">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-200 border-t-sky-500"></div>
+        </div>
+      </div>
+    );
+  }
 
   if (success) {
     return (
@@ -153,7 +223,9 @@ export default function CreateExam() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-semibold text-slate-900 mb-2">Exam Created Successfully</h2>
+          <h2 className="text-2xl font-semibold text-slate-900 mb-2">
+            {editingExamId ? "Exam Updated Successfully" : "Exam Created Successfully"}
+          </h2>
           <p className="text-slate-600 mb-6">
             {isDean ? "Your exam is already approved. Now add questions to publish it to students." : "Now add questions to your exam."}
           </p>
@@ -189,7 +261,9 @@ export default function CreateExam() {
               </span>
             </div>
             <div className="mt-4">
-              <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Create New Exam</h1>
+              <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">
+                {editingExamId ? "Update Exam Details" : "Create New Exam"}
+              </h1>
               <div className="mt-2 h-1 w-12 rounded-full bg-gradient-to-r from-sky-500 to-blue-500" />
               <p className="mt-2 text-sm text-slate-600">
                 {isDean ? "Fill in the exam details. Dean-created exams approve automatically and can be shown to students as soon as questions are added." : "Fill in the exam details. It will be sent to the dean for approval."}
@@ -481,7 +555,7 @@ export default function CreateExam() {
                   disabled={loading || formData.year_level.length === 0}
                   className="flex-1 bg-slate-900 text-white py-3 px-6 rounded-xl hover:bg-slate-800 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-slate-900/20"
                 >
-                  {loading ? "Creating..." : "Create Exam"}
+                  {loading ? (editingExamId ? "Updating..." : "Creating...") : (editingExamId ? "Update Exam" : "Create Exam")}
                 </button>
               </div>
             </form>
