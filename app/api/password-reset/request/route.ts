@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
     const backendUrl = (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? API_URL).replace(/\/api$/, "");
-    const res = await fetch(`${backendUrl}/api/password-reset/request/`, {
+    const res = await fetch(`${backendUrl}/api/password-reset/request-direct/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body,
