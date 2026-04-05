@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { API_URL } from "@/lib/api";
+import { extractUpstreamMessage } from "@/lib/upstream-response";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,13 +26,13 @@ export async function POST(request: NextRequest) {
 
     if (!res.ok) {
       return NextResponse.json(
-        { error: text.trim() || "Unable to reset password right now." },
+        { error: extractUpstreamMessage(text, "Unable to reset password right now.") },
         { status: res.status }
       );
     }
 
     return NextResponse.json(
-      { message: text.trim() || "Password reset successfully." },
+      { message: extractUpstreamMessage(text, "Password reset successfully.") },
       { status: res.status }
     );
   } catch {

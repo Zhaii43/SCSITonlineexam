@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { API_URL } from "@/lib/api";
+import { extractUpstreamMessage } from "@/lib/upstream-response";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,13 +26,13 @@ export async function POST(request: NextRequest) {
 
     if (!res.ok) {
       return NextResponse.json(
-        { error: text.trim() || "Unable to send password reset email right now. Please try again later." },
+        { error: extractUpstreamMessage(text, "Unable to send password reset email right now. Please try again later.") },
         { status: res.status }
       );
     }
 
     return NextResponse.json(
-      { message: text.trim() || "Verification code sent." },
+      { message: extractUpstreamMessage(text, "Verification code sent.") },
       { status: res.status }
     );
   } catch {
