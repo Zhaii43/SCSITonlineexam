@@ -122,6 +122,10 @@ export default function DeanShell({ children }: { children: React.ReactNode }) {
                   <span className="h-2 w-2 rounded-full bg-sky-400" />
                   Approved Exams
                 </Link>
+                <Link href="/exam/create" onClick={() => setSidebarMobilePath(null)} className={itemClass("/exam/create")}>
+                  <span className="h-2 w-2 rounded-full bg-sky-400" />
+                  Create Exam
+                </Link>
                 <Link href="/dashboard/dean/enrollment-records" onClick={() => setSidebarMobilePath(null)} className={itemClass("/dashboard/dean/enrollment-records")}>
                   <span className="h-2 w-2 rounded-full bg-sky-400" />
                   Enrollment Records
@@ -194,6 +198,10 @@ export default function DeanShell({ children }: { children: React.ReactNode }) {
               <Link href="/dashboard/dean#approved-exams" className={itemClass("/dashboard/dean#approved-exams")}>
                 <span className="h-2 w-2 rounded-full bg-sky-400" />
                 Approved Exams
+              </Link>
+              <Link href="/exam/create" className={itemClass("/exam/create")}>
+                <span className="h-2 w-2 rounded-full bg-sky-400" />
+                Create Exam
               </Link>
               <Link href="/dashboard/dean/enrollment-records" className={itemClass("/dashboard/dean/enrollment-records")}>
                 <span className="h-2 w-2 rounded-full bg-sky-400" />

@@ -1,16 +1,17 @@
 // app/exam/create/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import InstructorShell from "@/components/InstructorShell";
+import RoleShell from "@/components/RoleShell";
 
 import { API_URL } from "@/lib/api";
 export default function CreateExam() {
   const router = useRouter();
+  const [role, setRole] = useState<"" | "instructor" | "dean">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -38,6 +39,18 @@ export default function CreateExam() {
     shuffle_options: true,
   });
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedRole = window.localStorage.getItem("user_role");
+      if (storedRole === "instructor" || storedRole === "dean") {
+        setRole(storedRole);
+      }
+    }
+  }, []);
+
+  const dashboardHref = role === "dean" ? "/dashboard/dean" : "/dashboard/teacher";
+  const isDean = role === "dean";
+
   const departments = [
     { value: "BSHM", label: "Hospitality Management" },
     { value: "BSIT", label: "Information Technology" },
@@ -59,15 +72,6 @@ export default function CreateExam() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleYearLevelChange = (value: string) => {
-    setFormData(prev => {
-      if (prev.year_level.includes(value)) {
-        return { ...prev, year_level: prev.year_level.filter(l => l !== value) };
-      }
-      return { ...prev, year_level: [...prev.year_level, value] };
-    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,8 +129,8 @@ export default function CreateExam() {
       const data = await res.json();
       setExamId(data.exam_id);
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message || "Failed to create exam");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to create exam");
     } finally {
       setLoading(false);
     }
@@ -142,7 +146,9 @@ export default function CreateExam() {
             </svg>
           </div>
           <h2 className="text-2xl font-semibold text-slate-900 mb-2">Exam Created Successfully</h2>
-          <p className="text-slate-600 mb-6">Now add questions to your exam.</p>
+          <p className="text-slate-600 mb-6">
+            {isDean ? "Your exam is already approved. Now add questions to publish it to students." : "Now add questions to your exam."}
+          </p>
           <Link href={`/exam/questions/${examId}`} className="inline-block bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-all font-semibold shadow-lg shadow-slate-900/20">
             Add Questions
           </Link>
@@ -157,12 +163,12 @@ export default function CreateExam() {
       
       <div className="relative">
         <Header />
-        <InstructorShell>
+        <RoleShell>
 
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12" style={{ fontFamily: "'Space Grotesk', 'Manrope', sans-serif" }}>
           <div className="mb-6 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200 shadow-xl shadow-slate-200/60 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <Link href="/dashboard/teacher" className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 text-xs font-semibold tracking-[0.2em] uppercase">
+              <Link href={dashboardHref} className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 text-xs font-semibold tracking-[0.2em] uppercase">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
                   <svg className="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -177,7 +183,9 @@ export default function CreateExam() {
             <div className="mt-4">
               <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Create New Exam</h1>
               <div className="mt-2 h-1 w-12 rounded-full bg-gradient-to-r from-sky-500 to-blue-500" />
-              <p className="mt-2 text-sm text-slate-600">Fill in the exam details. It will be sent to the dean for approval.</p>
+              <p className="mt-2 text-sm text-slate-600">
+                {isDean ? "Fill in the exam details. Dean-created exams approve automatically and can be shown to students as soon as questions are added." : "Fill in the exam details. It will be sent to the dean for approval."}
+              </p>
             </div>
           </div>
 
@@ -449,13 +457,13 @@ export default function CreateExam() {
 
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                 <p className="text-sm text-amber-800">
-                  This exam will be sent to the dean for approval before it becomes available to students.
+                  {isDean ? "Because this is a dean account, this exam will approve automatically after creation." : "This exam will be sent to the dean for approval before it becomes available to students."}
                 </p>
               </div>
 
               <div className="flex gap-4">
                 <Link
-                  href="/dashboard/teacher"
+                  href={dashboardHref}
                   className="flex-1 px-6 py-3 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium text-center"
                 >
                   Cancel
@@ -472,7 +480,7 @@ export default function CreateExam() {
           </div>
         </main>
 
-        </InstructorShell>
+        </RoleShell>
         <Footer />
       </div>
     </div>

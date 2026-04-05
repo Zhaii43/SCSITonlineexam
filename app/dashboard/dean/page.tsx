@@ -33,6 +33,7 @@ interface PendingExam {
   scheduled_date: string;
   duration_minutes: number;
   total_points: number;
+  created_by_id: number;
   created_by: string;
   year_level: string;
 }
@@ -92,6 +93,7 @@ interface ApprovedExam {
   scheduled_date: string;
   duration_minutes: number;
   total_points: number;
+  created_by_id: number;
   created_by: string;
   year_level: string;
   approved_by: string;
@@ -1185,6 +1187,14 @@ export default function DeanDashboard() {
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Dean Dashboard</p>
                 <h1 className="mt-2 text-3xl sm:text-4xl font-semibold text-slate-900">Welcome, Dean {profile?.first_name}</h1>
                 <p className="mt-2 text-slate-600">{profile?.department} Department | {profile?.school_id}</p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Link
+                    href="/exam/create"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-slate-900/20 hover:bg-sky-800 transition-all"
+                  >
+                    Create Department Exam
+                  </Link>
+                </div>
               </div>
               <div className="relative">
                 <div className="h-28 w-28 rounded-full bg-white shadow-lg shadow-slate-900/10">
@@ -2124,7 +2134,7 @@ export default function DeanDashboard() {
                             <span>{exam.subject}</span>
                           </div>
                           <div>
-                            <span className="block font-medium">Instructor</span>
+                            <span className="block font-medium">Created By</span>
                             <span>{exam.created_by}</span>
                           </div>
                           <div>
@@ -2141,16 +2151,24 @@ export default function DeanDashboard() {
                           </div>
                         </div>
                       </div>
-                      <div>
+                      <div className="flex flex-wrap gap-3">
                         <button
                           onClick={() => handleViewExamDetails(exam.id)}
                           className="px-5 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all font-semibold shadow-lg shadow-slate-900/20"
                         >
                           View Details
                         </button>
+                        {profile?.id === exam.created_by_id && (
+                          <Link
+                            href={`/exam/${exam.id}/results`}
+                            className="px-5 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all font-semibold shadow-lg shadow-emerald-600/20"
+                          >
+                            Results & Grading
+                          </Link>
+                        )}
                         <button
                           onClick={() => handleViewExamPhotos(exam.id)}
-                          className="ml-3 px-6 py-3 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-semibold"
+                          className="px-6 py-3 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-semibold"
                         >
                           Review Photos
                         </button>

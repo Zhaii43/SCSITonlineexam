@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import InstructorShell from "@/components/InstructorShell";
+import RoleShell from "@/components/RoleShell";
 import { useToast } from "@/components/ToastProvider";
 import { API_URL } from "@/lib/api";
 
@@ -48,6 +48,7 @@ export default function GradeExam() {
   const toast = useToast();
   const examIdParam = params?.id;
   const examId = Array.isArray(examIdParam) ? examIdParam[0] : examIdParam;
+  const [role, setRole] = useState<"" | "instructor" | "dean">("");
 
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -94,6 +95,17 @@ export default function GradeExam() {
   useEffect(() => {
     fetchResults();
   }, [fetchResults]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedRole = window.localStorage.getItem("user_role");
+      if (storedRole === "instructor" || storedRole === "dean") {
+        setRole(storedRole);
+      }
+    }
+  }, []);
+
+  const dashboardHref = role === "dean" ? "/dashboard/dean" : "/dashboard/teacher";
 
   const pendingResults = useMemo(
     () => results.filter((result) => !result.is_graded),
@@ -164,7 +176,7 @@ export default function GradeExam() {
       <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
         <div className="relative">
           <Header />
-          <InstructorShell>
+          <RoleShell>
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16" style={{ fontFamily: "'Space Grotesk', 'Manrope', sans-serif" }}>
               <div className="rounded-3xl border border-slate-200 bg-white/90 p-10 shadow-xl shadow-slate-200/60" aria-busy="true">
                 <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
@@ -178,7 +190,7 @@ export default function GradeExam() {
                 </div>
               </div>
             </main>
-          </InstructorShell>
+          </RoleShell>
           <Footer />
         </div>
       </div>
@@ -190,7 +202,7 @@ export default function GradeExam() {
       <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
         <div className="relative">
           <Header />
-          <InstructorShell>
+          <RoleShell>
             <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16" style={{ fontFamily: "'Space Grotesk', 'Manrope', sans-serif" }}>
               <div className="rounded-3xl border border-red-200 bg-white/90 p-8 shadow-xl shadow-red-100/60">
                 <div className="flex items-start gap-4">
@@ -214,7 +226,7 @@ export default function GradeExam() {
                         Try Again
                       </button>
                       <Link
-                        href="/dashboard/teacher"
+                        href={dashboardHref}
                         className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                       >
                         Back to Dashboard
@@ -224,7 +236,7 @@ export default function GradeExam() {
                 </div>
               </div>
             </main>
-          </InstructorShell>
+          </RoleShell>
           <Footer />
         </div>
       </div>
@@ -236,7 +248,7 @@ export default function GradeExam() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(14,165,233,0.18),transparent_55%),radial-gradient(circle_at_90%_0%,rgba(251,146,60,0.14),transparent_40%),radial-gradient(circle_at_50%_90%,rgba(16,185,129,0.12),transparent_45%)]" />
       <div className="relative">
         <Header />
-        <InstructorShell>
+        <RoleShell>
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10" style={{ fontFamily: "'Space Grotesk', 'Manrope', sans-serif" }}>
             <div className="mb-6 rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl shadow-slate-200/60">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -467,7 +479,7 @@ export default function GradeExam() {
               </section>
             </div>
           </main>
-        </InstructorShell>
+        </RoleShell>
         <Footer />
       </div>
     </div>

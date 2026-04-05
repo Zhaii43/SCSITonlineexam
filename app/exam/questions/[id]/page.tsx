@@ -1,12 +1,12 @@
 // app/exam/questions/[id]/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import InstructorShell from "@/components/InstructorShell";
+import RoleShell from "@/components/RoleShell";
 
 import { API_URL } from "@/lib/api";
 interface Question {
@@ -15,6 +15,13 @@ interface Question {
   options?: string[];
   correct_answer: string;
   points: number;
+}
+
+interface ExamDetail {
+  title: string;
+  subject: string;
+  question_type: string;
+  total_points: number;
 }
 
 const QUESTION_TYPES = [
@@ -27,9 +34,11 @@ const QUESTION_TYPES = [
 export default function AddQuestions() {
   const router = useRouter();
   const params = useParams();
-  const examId = params.id;
+  const examIdParam = params.id;
+  const examId = Array.isArray(examIdParam) ? examIdParam[0] : examIdParam;
+  const [role, setRole] = useState<"" | "instructor" | "dean">("");
   
-  const [exam, setExam] = useState<any>(null);
+  const [exam, setExam] = useState<ExamDetail | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<Question>({
     question: "",
@@ -46,10 +55,17 @@ export default function AddQuestions() {
   const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
-    fetchExam();
-  }, [examId]);
+    if (typeof window !== "undefined") {
+      const storedRole = window.localStorage.getItem("user_role");
+      if (storedRole === "instructor" || storedRole === "dean") {
+        setRole(storedRole);
+      }
+    }
+  }, []);
 
-  const fetchExam = async () => {
+  const dashboardHref = role === "dean" ? "/dashboard/dean" : "/dashboard/teacher";
+
+  const fetchExam = useCallback(async () => {
     const token = localStorage.getItem("access_token");
     try {
       const res = await fetch(`${API_URL}/exams/${examId}/detail/`, {
@@ -63,11 +79,15 @@ export default function AddQuestions() {
         setSelectedQuestionType(initialType);
       }
       setLoading(false);
-    } catch (err) {
+    } catch {
       setError("Failed to load exam");
       setLoading(false);
     }
-  };
+  }, [examId]);
+
+  useEffect(() => {
+    fetchExam();
+  }, [fetchExam]);
 
   const addQuestion = () => {
     if (!currentQuestion.question || !currentQuestion.correct_answer) {
@@ -118,9 +138,9 @@ export default function AddQuestions() {
 
       if (!res.ok) throw new Error("Failed to save questions");
 
-      router.push("/dashboard/teacher");
-    } catch (err: any) {
-      setError(err.message);
+      router.push(dashboardHref);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save questions");
     } finally {
       setSaving(false);
     }
@@ -156,10 +176,11 @@ export default function AddQuestions() {
       }
 
       alert(`Successfully imported ${data.count} questions!`);
-      router.push("/dashboard/teacher");
-    } catch (err: any) {
-      setError(err.message);
-      alert(err.message);
+      router.push(dashboardHref);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to import questions";
+      setError(message);
+      alert(message);
     } finally {
       setImporting(false);
       setShowImportModal(false);
@@ -182,11 +203,11 @@ export default function AddQuestions() {
       
       <div className="relative">
         <Header />
-        <InstructorShell>
+        <RoleShell>
 
         <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="mb-8">
-            <Link href="/dashboard/teacher" className="text-sky-600 hover:text-sky-700 font-medium">
+            <Link href={dashboardHref} className="text-sky-600 hover:text-sky-700 font-medium">
               ← Back to Dashboard
             </Link>
             <div className="flex justify-between items-center mt-4">
@@ -337,7 +358,7 @@ export default function AddQuestions() {
 
           <div className="flex gap-4">
             <Link
-              href="/dashboard/teacher"
+              href={dashboardHref}
               className="flex-1 px-6 py-3 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium text-center"
             >
               Cancel
@@ -404,7 +425,7 @@ export default function AddQuestions() {
             </div>
           )}
         </main>
-        </InstructorShell>
+        </RoleShell>
         <Footer />
       </div>
     </div>

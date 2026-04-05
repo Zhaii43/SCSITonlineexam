@@ -1,12 +1,12 @@
 // app/exam/[id]/results/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import InstructorShell from "@/components/InstructorShell";
+import RoleShell from "@/components/RoleShell";
 
 import { API_URL } from "@/lib/api";
 interface ExamResult {
@@ -30,9 +30,10 @@ interface ExamData {
 }
 
 export default function ExamResults() {
-  const router = useRouter();
   const params = useParams();
-  const examId = params.id;
+  const examIdParam = params.id;
+  const examId = Array.isArray(examIdParam) ? examIdParam[0] : examIdParam;
+  const [role, setRole] = useState<"" | "instructor" | "dean">("");
   
   const [loading, setLoading] = useState(true);
   const [exam, setExam] = useState<ExamData | null>(null);
@@ -41,10 +42,17 @@ export default function ExamResults() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchResults();
-  }, [examId]);
+    if (typeof window !== "undefined") {
+      const storedRole = window.localStorage.getItem("user_role");
+      if (storedRole === "instructor" || storedRole === "dean") {
+        setRole(storedRole);
+      }
+    }
+  }, []);
 
-  const fetchResults = async () => {
+  const dashboardHref = role === "dean" ? "/dashboard/dean" : "/dashboard/teacher";
+
+  const fetchResults = useCallback(async () => {
     const token = localStorage.getItem("access_token");
     try {
       const res = await fetch(`${API_URL}/exams/${examId}/results/`, {
@@ -62,24 +70,28 @@ export default function ExamResults() {
         failed: data.failed,
       });
       setLoading(false);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load results");
       setLoading(false);
     }
-  };
+  }, [examId]);
+
+  useEffect(() => {
+    fetchResults();
+  }, [fetchResults]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-sky-100 bg-[radial-gradient(circle_at_20%_10%,rgba(14,165,233,0.18),transparent_55%),radial-gradient(circle_at_80%_0%,rgba(249,115,22,0.12),transparent_45%)] flex items-center justify-center">
         <div className="relative w-full">
           <Header />
-          <InstructorShell>
+          <RoleShell>
           <div className="flex items-center justify-center py-20">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white shadow-xl shadow-slate-200/70 border border-slate-200">
               <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-200 border-t-sky-500"></div>
             </div>
           </div>
-          </InstructorShell>
+          </RoleShell>
           <Footer />
         </div>
       </div>
@@ -91,7 +103,7 @@ export default function ExamResults() {
       <div className="min-h-screen bg-sky-100 bg-[radial-gradient(circle_at_20%_10%,rgba(14,165,233,0.18),transparent_55%),radial-gradient(circle_at_80%_0%,rgba(249,115,22,0.12),transparent_45%)] flex items-center justify-center">
         <div className="relative w-full">
           <Header />
-          <InstructorShell>
+          <RoleShell>
           <div className="flex items-center justify-center py-20 px-4">
             <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-red-200 p-8 text-center max-w-md">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-red-700">
@@ -101,12 +113,12 @@ export default function ExamResults() {
               </div>
               <h2 className="text-2xl font-semibold text-slate-900 mb-2">Error</h2>
               <p className="text-slate-600 mb-6">{error}</p>
-              <Link href="/dashboard/teacher" className="inline-block bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-all font-semibold shadow-lg shadow-slate-900/20">
+              <Link href={dashboardHref} className="inline-block bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-all font-semibold shadow-lg shadow-slate-900/20">
                 Back to Dashboard
               </Link>
             </div>
           </div>
-          </InstructorShell>
+          </RoleShell>
           <Footer />
         </div>
       </div>
@@ -121,11 +133,11 @@ export default function ExamResults() {
       
       <div className="relative">
         <Header />
-        <InstructorShell>
+        <RoleShell>
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" style={{ fontFamily: "'Space Grotesk', 'Manrope', sans-serif" }}>
           <div className="mb-6 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200 shadow-xl shadow-slate-200/60 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <Link href="/dashboard/teacher" className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 text-xs font-semibold tracking-[0.2em] uppercase">
+              <Link href={dashboardHref} className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 text-xs font-semibold tracking-[0.2em] uppercase">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
                   <svg className="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -189,7 +201,7 @@ export default function ExamResults() {
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-2">No Submissions Yet</h3>
-                <p className="text-slate-600">Students haven't taken this exam yet.</p>
+                <p className="text-slate-600">Students haven&apos;t taken this exam yet.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -245,7 +257,7 @@ export default function ExamResults() {
             )}
           </div>
         </main>
-        </InstructorShell>
+        </RoleShell>
         <Footer />
       </div>
     </div>
