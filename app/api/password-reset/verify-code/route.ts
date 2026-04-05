@@ -14,10 +14,26 @@ export async function POST(request: NextRequest) {
     });
 
     const text = await res.text();
-    return new NextResponse(text, {
-      status: res.status,
-      headers: { "Content-Type": res.headers.get("content-type") ?? "application/json" },
-    });
+    const contentType = res.headers.get("content-type") ?? "";
+
+    if (contentType.includes("application/json")) {
+      return new NextResponse(text, {
+        status: res.status,
+        headers: { "Content-Type": contentType },
+      });
+    }
+
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: text.trim() || "Unable to verify the reset code right now." },
+        { status: res.status }
+      );
+    }
+
+    return NextResponse.json(
+      { message: text.trim() || "Code verified." },
+      { status: res.status }
+    );
   } catch {
     return NextResponse.json(
       { error: "Unable to reach the backend service right now. Please try again." },
