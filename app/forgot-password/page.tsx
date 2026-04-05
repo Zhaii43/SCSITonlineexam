@@ -23,6 +23,14 @@ export default function ForgotPassword() {
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
 
+  const safeJson = async (res: Response) => {
+    try {
+      return await res.json();
+    } catch {
+      return {};
+    }
+  };
+
   // Step 1 — send code
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,11 +42,11 @@ export default function ForgotPassword() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) { setError(data.error || "Failed to send code."); return; }
       setStep(2);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Unable to reach the server. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -55,13 +63,13 @@ export default function ForgotPassword() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code }),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) { setError(data.error || "Invalid code."); return; }
       setToken(data.token);
       router.push(`/reset-password?token=${encodeURIComponent(data.token)}`);
       return;
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Unable to reach the server. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -80,11 +88,11 @@ export default function ForgotPassword() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, new_password: password }),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) { setError(data.error || "Failed to reset password."); return; }
       setDone(true);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Unable to reach the server. Please try again.");
     } finally {
       setLoading(false);
     }

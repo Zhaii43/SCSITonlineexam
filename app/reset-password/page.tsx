@@ -20,6 +20,14 @@ function ResetPasswordForm() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
+  const safeJson = async (res: Response) => {
+    try {
+      return await res.json();
+    } catch {
+      return {};
+    }
+  };
+
   useEffect(() => {
     if (token) {
       validateToken();
@@ -36,13 +44,13 @@ function ResetPasswordForm() {
         body: JSON.stringify({ token }),
       });
 
-      const data = await res.json();
+      const data = await safeJson(res);
       setValid(data.valid);
       if (!data.valid) {
         setError(data.error || "Invalid or expired token");
       }
     } catch (err) {
-      setError("Failed to validate token");
+      setError("Unable to validate token right now.");
     } finally {
       setValidating(false);
     }
@@ -71,7 +79,7 @@ function ResetPasswordForm() {
         body: JSON.stringify({ token, new_password: password }),
       });
 
-      const data = await res.json();
+      const data = await safeJson(res);
 
       if (res.ok) {
         setSuccess(true);
@@ -80,7 +88,7 @@ function ResetPasswordForm() {
         setError(data.error || "Failed to reset password");
       }
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      setError("Unable to reach the server. Please try again.");
     } finally {
       setLoading(false);
     }
