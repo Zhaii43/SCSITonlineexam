@@ -122,15 +122,24 @@ export default function CreateExam() {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || "Failed to create exam");
+        const data = await res.json().catch(() => null);
+        throw new Error(
+          data?.error ||
+          data?.detail ||
+          data?.message ||
+          `Failed to create exam (${res.status})`
+        );
       }
 
       const data = await res.json();
       setExamId(data.exam_id);
       setSuccess(true);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create exam");
+      if (err instanceof TypeError) {
+        setError("Failed to reach the server. Please check your connection and API configuration.");
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to create exam");
+      }
     } finally {
       setLoading(false);
     }
