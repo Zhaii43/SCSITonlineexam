@@ -64,6 +64,7 @@ export default function AddQuestions() {
   }, []);
 
   const dashboardHref = role === "dean" ? "/dashboard/dean" : "/dashboard/teacher";
+  const examDetailsHref = `/exam/${examId}/edit`;
 
   const fetchExam = useCallback(async () => {
     const token = localStorage.getItem("access_token");
@@ -231,7 +232,22 @@ export default function AddQuestions() {
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
-              {error}
+              <p>{error}</p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <Link
+                  href={examDetailsHref}
+                  className="inline-flex items-center justify-center rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 transition-all"
+                >
+                  Back to Exam Details
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="inline-flex items-center justify-center rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 transition-all"
+                >
+                  Stay Here
+                </button>
+              </div>
             </div>
           )}
 
