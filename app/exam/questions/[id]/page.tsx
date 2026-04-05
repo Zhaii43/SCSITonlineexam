@@ -95,6 +95,11 @@ export default function AddQuestions() {
       return;
     }
 
+    if (!exam) {
+      alert("Exam details are still loading. Please try again.");
+      return;
+    }
+
     const totalPoints = questions.reduce((sum, q) => sum + q.points, 0) + currentQuestion.points;
     if (totalPoints > exam.total_points) {
       alert(`Total points cannot exceed ${exam.total_points}`);
