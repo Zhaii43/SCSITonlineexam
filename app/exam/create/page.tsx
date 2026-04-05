@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -11,9 +11,7 @@ import RoleShell from "@/components/RoleShell";
 import { API_URL, apiFetch } from "@/lib/api";
 export default function CreateExam() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const examIdParam = searchParams.get("examId");
-  const editingExamId = examIdParam ? Number(examIdParam) : null;
+  const [editingExamId, setEditingExamId] = useState<number | null>(null);
   const [role, setRole] = useState<"" | "instructor" | "dean">("");
   const [initialLoading, setInitialLoading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -49,6 +47,10 @@ export default function CreateExam() {
       if (storedRole === "instructor" || storedRole === "dean") {
         setRole(storedRole);
       }
+
+      const examIdValue = new URLSearchParams(window.location.search).get("examId");
+      const parsedExamId = examIdValue ? Number(examIdValue) : null;
+      setEditingExamId(parsedExamId && Number.isFinite(parsedExamId) ? parsedExamId : null);
     }
   }, []);
 
