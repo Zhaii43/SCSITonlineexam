@@ -67,6 +67,7 @@ export default function Login() {
       const profileData = await profileRes.json();
       localStorage.setItem("user_role", profileData.role);
       localStorage.setItem("user_name", profileData.first_name || profileData.username);
+      localStorage.setItem("user_id", String(profileData.id));
       setSuccess(true);
       toast.success("Login successful. Redirecting...");
       setTimeout(() => {

@@ -937,6 +937,7 @@ export default function DeanDashboard() {
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user_name");
     localStorage.removeItem("user_role");
+    localStorage.removeItem("user_id");
     toast.success("Logged out successfully.");
     router.push("/login");
   };
