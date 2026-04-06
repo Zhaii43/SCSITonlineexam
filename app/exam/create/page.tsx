@@ -41,18 +41,38 @@ export default function CreateExam() {
     shuffle_options: true,
   });
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedRole = window.localStorage.getItem("user_role");
-      if (storedRole === "instructor" || storedRole === "dean") {
-        setRole(storedRole);
-      }
+  const DRAFT_KEY = "exam_create_draft";
 
-      const examIdValue = new URLSearchParams(window.location.search).get("examId");
-      const parsedExamId = examIdValue ? Number(examIdValue) : null;
-      setEditingExamId(parsedExamId && Number.isFinite(parsedExamId) ? parsedExamId : null);
+  // Restore draft from localStorage on mount (only for new exams, not editing)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storedRole = window.localStorage.getItem("user_role");
+    if (storedRole === "instructor" || storedRole === "dean") setRole(storedRole);
+
+    const examIdValue = new URLSearchParams(window.location.search).get("examId");
+    const parsedExamId = examIdValue ? Number(examIdValue) : null;
+    const resolvedId = parsedExamId && Number.isFinite(parsedExamId) ? parsedExamId : null;
+    setEditingExamId(resolvedId);
+
+    // Only restore draft when creating a new exam
+    if (!resolvedId) {
+      try {
+        const saved = localStorage.getItem("exam_create_draft");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setFormData(parsed);
+        }
+      } catch {}
     }
   }, []);
+
+  // Auto-save form to localStorage on every change (only for new exams)
+  useEffect(() => {
+    if (editingExamId) return;
+    try {
+      localStorage.setItem("exam_create_draft", JSON.stringify(formData));
+    } catch {}
+  }, [formData, editingExamId]);
 
   useEffect(() => {
     if (!editingExamId) return;
@@ -194,6 +214,8 @@ export default function CreateExam() {
 
       const data = await res.json();
       setExamId(editingExamId ?? data.exam_id);
+      // Clear the form draft now that the exam was successfully created
+      try { localStorage.removeItem("exam_create_draft"); } catch {}
       setSuccess(true);
     } catch (err: unknown) {
       if (err instanceof TypeError) {
@@ -270,6 +292,18 @@ export default function CreateExam() {
               <p className="mt-2 text-sm text-slate-600">
                 {isDean ? "Fill in the exam details. Dean-created exams approve automatically and can be shown to students as soon as questions are added." : "Fill in the exam details. It will be sent to the dean for approval."}
               </p>
+              {!editingExamId && formData.title && (
+                <div className="mt-3 flex items-center justify-between rounded-lg bg-amber-50 border border-amber-200 px-4 py-2">
+                  <p className="text-xs text-amber-800 font-medium">📝 Draft restored — your previous progress was saved.</p>
+                  <button
+                    type="button"
+                    onClick={() => { try { localStorage.removeItem("exam_create_draft"); } catch {} setFormData({ title: "", subject: "", department: "", exam_type: "quiz", question_type: "multiple_choice", scheduled_date: "", scheduled_time: "", expiration_date: "", expiration_time: "", duration_minutes: "", total_points: "", passing_score: "", instructions: "", year_level: [], is_practice: false, max_attempts: "1", retake_policy: "none", question_pool_size: "0", shuffle_options: true }); }}
+                    className="text-xs font-semibold text-amber-700 hover:text-red-600 underline ml-4 shrink-0"
+                  >
+                    Clear Draft
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

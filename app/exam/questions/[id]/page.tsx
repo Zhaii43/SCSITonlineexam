@@ -55,22 +55,6 @@ export default function AddQuestions() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [questionsSaved, setQuestionsSaved] = useState(false);
 
-  // Discard the draft exam if the user leaves without saving questions
-  useEffect(() => {
-    if (!examId) return;
-    const discard = () => {
-      if (questionsSaved) return;
-      const token = localStorage.getItem("access_token");
-      if (!token) return;
-      navigator.sendBeacon(
-        `${API_URL}/exams/${examId}/discard-draft/`,
-        new Blob([JSON.stringify({})], { type: "application/json" })
-      );
-    };
-    window.addEventListener("beforeunload", discard);
-    return () => window.removeEventListener("beforeunload", discard);
-  }, [examId, questionsSaved]);
-
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedRole = window.localStorage.getItem("user_role");
@@ -213,7 +197,6 @@ export default function AddQuestions() {
   };
 
   const discardDraft = async () => {
-    if (questionsSaved) return;
     const token = localStorage.getItem("access_token");
     if (!token || !examId) return;
     try {
@@ -247,7 +230,6 @@ export default function AddQuestions() {
             <div className="flex items-center gap-3 flex-wrap">
               <Link
                 href={examDetailsHref}
-                onClick={discardDraft}
                 className="inline-flex items-center gap-1 text-sky-600 hover:text-sky-700 font-medium text-sm"
               >
                 ← Back to Exam Details
@@ -255,7 +237,6 @@ export default function AddQuestions() {
               <span className="text-slate-300">|</span>
               <Link
                 href={dashboardHref}
-                onClick={discardDraft}
                 className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-700 font-medium text-sm"
               >
                 Dashboard
@@ -434,10 +415,9 @@ export default function AddQuestions() {
           <div className="flex gap-4">
             <Link
               href={dashboardHref}
-              onClick={discardDraft}
               className="flex-1 px-6 py-3 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium text-center"
             >
-              Cancel
+              Save as Draft & Exit
             </Link>
             <button
               onClick={handleSave}
