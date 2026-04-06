@@ -1533,6 +1533,52 @@ export default function DeanDashboard() {
             </div>
           </div>
 
+          {draftExams.length > 0 && (
+            <div className="mb-8 rounded-3xl border border-amber-200/80 bg-amber-50/60 backdrop-blur-xl shadow-lg shadow-amber-200/40 overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-amber-200/70 bg-amber-100/60">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-amber-200 text-amber-800 flex items-center justify-center">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-amber-900">Draft Exams</h3>
+                    <p className="text-xs text-amber-700">These exams were created but questions were never saved. Continue or delete them.</p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center justify-center rounded-full bg-amber-200 text-amber-800 text-xs font-bold px-2.5 py-0.5">{draftExams.length}</span>
+              </div>
+              <div className="divide-y divide-amber-200/60">
+                {draftExams.map((draft) => (
+                  <div key={draft.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-4 bg-white/70 hover:bg-white transition-all">
+                    <div>
+                      <p className="font-semibold text-slate-900">{draft.title}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{draft.subject} · {draft.exam_type} · {draft.total_points} pts</p>
+                      <p className="text-xs text-slate-400 mt-0.5">Created {new Date(draft.created_at).toLocaleString()}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Link
+                        href={`/exam/questions/${draft.id}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-800 transition-all"
+                      >
+                        Continue
+                      </Link>
+                      <button
+                        onClick={() => handleDiscardDraft(draft.id)}
+                        disabled={discardingDraft === draft.id}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-all disabled:opacity-50"
+                      >
+                        {discardingDraft === draft.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+
           <div className="mb-6">
             <div className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-gradient-to-r from-white via-slate-50 to-white p-3 shadow-lg shadow-slate-200/60">
               <div className="pointer-events-none absolute -left-16 -top-12 h-28 w-28 rounded-full bg-sky-200/40 blur-2xl" />
