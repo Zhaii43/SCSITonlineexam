@@ -1,50 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getServerBackendUrl } from "@/lib/server-backend-url";
-import { extractUpstreamMessage } from "@/lib/upstream-response";
+import { sendPasswordResetEmail } from "@/lib/mailer";
+
+const BACKEND = "https://scsitonlineexambackend.onrender.com";
 
 export const runtime = "nodejs";
 
-async function proxyBackendResetRequest(backendUrl: string, body: unknown) {
-  const response = await fetch(`${backendUrl}/api/password-reset/request/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
-
-  const text = await response.text();
-  const contentType = response.headers.get("content-type") ?? "";
-
-  if (contentType.includes("application/json")) {
-    return new NextResponse(text, {
-      status: response.status,
-      headers: { "Content-Type": contentType },
-    });
-  }
-
-  if (!response.ok) {
-    return NextResponse.json(
-      { error: extractUpstreamMessage(text, "Unable to send password reset email right now. Please try again later.") },
-      { status: response.status }
-    );
-  }
-
-  return NextResponse.json(
-    { message: extractUpstreamMessage(text, "A 6-digit verification code has been sent.") },
-    { status: response.status }
-  );
-}
-
 export async function POST(request: NextRequest) {
+  let email = "";
   try {
     const body = await request.json();
-    const backendUrl = getServerBackendUrl();
-    return await proxyBackendResetRequest(backendUrl, body);
+    email = (body.email ?? "").trim().toLowerCase();
+
+    const res = await fetch(`${BACKEND}/api/password-reset/generate-otp/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+      cache: "no-store",
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: data.error ?? "Unable to send password reset email right now. Please try again later." },
+        { status: res.status }
+      );
+    }
+
+    const { otp, first_name, frontend_url } = data;
+    await sendPasswordResetEmail(email, first_name ?? "there", otp, frontend_url ?? "https://scsi-tonlineexam.vercel.app");
+
+    return NextResponse.json({ message: `A 6-digit verification code has been sent to ${email}` });
   } catch (err) {
     console.error("[password-reset/request] error:", err);
     return NextResponse.json(
-      { error: "Unable to reach the password reset service right now. Please try again." },
+      { error: "Unable to send password reset email right now. Please try again later." },
       { status: 503 }
     );
   }

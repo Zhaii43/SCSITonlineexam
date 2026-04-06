@@ -1,36 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { API_URL } from "@/lib/api";
 import { sendEmailChangeOtp } from "@/lib/mailer";
+
+const BACKEND = "https://scsitonlineexambackend.onrender.com";
+
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.text();
-    const backendUrl = (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? API_URL).replace(/\/api$/, "");
+    const body = await request.json();
     const authorization = request.headers.get("authorization");
 
-    const res = await fetch(`${backendUrl}/api/profile/email-change/generate-otp/`, {
+    const res = await fetch(`${BACKEND}/api/profile/email-change/generate-otp/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(authorization ? { Authorization: authorization } : {}),
       },
-      body,
+      body: JSON.stringify(body),
       cache: "no-store",
     });
 
+    const data = await res.json().catch(() => ({}));
+
     if (!res.ok) {
-      const text = await res.text();
-      let error = "Failed to send verification code";
-      try { error = JSON.parse(text).error ?? error; } catch {}
-      return NextResponse.json({ error }, { status: res.status });
+      return NextResponse.json(
+        { error: data.error ?? "Failed to send verification code" },
+        { status: res.status }
+      );
     }
 
-    const { otp, email } = await res.json();
+    const { otp, email } = data;
     await sendEmailChangeOtp(email, otp);
 
     return NextResponse.json({ message: `OTP sent to ${email}`, email });
-  } catch {
+  } catch (err) {
+    console.error("[email-change/request] error:", err);
     return NextResponse.json(
       { error: "Unable to reach the backend service right now. Please try again." },
       { status: 503 }
