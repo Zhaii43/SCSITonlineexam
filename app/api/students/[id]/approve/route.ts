@@ -21,7 +21,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (data.student_email) {
     try {
-      await sendStudentApprovalEmail(data.student_email, { firstName: data.student_first_name ?? "there" }, FRONTEND_URL);
+      await sendStudentApprovalEmail(data.student_email, {
+        firstName: data.student_first_name ?? "there",
+        fullName: `${data.student_first_name ?? ""} ${data.student_last_name ?? ""}`.trim() || undefined,
+        username: data.student_username,
+        email: data.student_email,
+        schoolId: data.student_school_id,
+        department: data.student_department,
+        yearLevel: data.student_year_level,
+        approvedAt: data.student_approved_at,
+      }, FRONTEND_URL);
     } catch (err) {
       console.error("[student/approve] email error:", err);
     }
