@@ -5,7 +5,6 @@ import { useState } from "react";
 import Link from "next/link";
 import Footer from "@/components/Footer";
 
-import { API_URL } from "@/lib/api";
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -127,7 +126,7 @@ export default function Register() {
   };
 
   const handleSendOtp = async () => {
-    const res = await fetch(`${API_URL}/register/pre-verify-email/`, {
+    const res = await fetch(`/api/register/pre-verify-email/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: formData.email }),
