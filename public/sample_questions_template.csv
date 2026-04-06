@@ -1,5 +1,11 @@
 question,type,options,correct_answer,points
 What is the capital of France?,multiple_choice,Paris|London|Berlin|Madrid,Paris,2
-What is 2 + 2?,identification,,4,1
-Explain the concept of Object-Oriented Programming,essay,,Sample answer,10
-List three programming languages,enumeration,,Python|Java|JavaScript,5
+Which planet is closest to the Sun?,multiple_choice,Mercury|Venus|Earth|Mars,Mercury,2
+What is the chemical symbol for water?,multiple_choice,H2O|CO2|O2|NaCl,H2O,2
+What is 15 multiplied by 4?,identification,,60,1
+Who wrote the novel Pride and Prejudice?,identification,,Jane Austen,1
+What year did World War II end?,identification,,1945,1
+List the three branches of the Philippine government,enumeration,,Executive|Legislative|Judicial,3
+Name four primary colors of light,enumeration,,Red|Green|Blue|White,4
+Explain the importance of the scientific method in research,essay,,The scientific method provides a systematic approach to inquiry...,10
+Describe the causes and effects of climate change,essay,,Climate change is caused by greenhouse gas emissions...,10

@@ -197,6 +197,8 @@ export default function DeanDashboard() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [auditCount, setAuditCount] = useState(0);
   const [announcementsCount, setAnnouncementsCount] = useState(0);
+  const [draftExams, setDraftExams] = useState<any[]>([]);
+  const [discardingDraft, setDiscardingDraft] = useState<number | null>(null);
   const [enrolledRecord, setEnrolledRecord] = useState<any>(null);
   const [enrolledLoading, setEnrolledLoading] = useState(false);
   const [editingSchoolId, setEditingSchoolId] = useState(false);
@@ -466,7 +468,7 @@ export default function DeanDashboard() {
     const token = localStorage.getItem("access_token");
     if (!token) return;
     try {
-      const [pendingExamsRes, approvedRes, usersRes, pendingStudentsRes, rejectedStudentsRes, auditCountRes, announcementsRes] = await Promise.all([
+      const [pendingExamsRes, approvedRes, usersRes, pendingStudentsRes, rejectedStudentsRes, auditCountRes, announcementsRes, draftExamsRes] = await Promise.all([
         fetch(`${API_URL}/exams/pending/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/exams/approved/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/department/users/`, { headers: { Authorization: `Bearer ${token}` } }),
@@ -474,6 +476,7 @@ export default function DeanDashboard() {
         fetch(`${API_URL}/students/rejected/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/audit/count/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/notifications/announcements/mine/`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/exams/drafts/`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       if (pendingExamsRes.ok) setPendingExams(await pendingExamsRes.json());
       if (approvedRes.ok) setApprovedExams(await approvedRes.json());
@@ -513,6 +516,7 @@ export default function DeanDashboard() {
         }
       }
       if (rejectedStudentsRes.ok) setRejectedStudents(await rejectedStudentsRes.json());
+      if (draftExamsRes.ok) setDraftExams(await draftExamsRes.json());
       if (auditCountRes.ok) {
         const data = await auditCountRes.json();
         setAuditCount(data.count || 0);
@@ -907,6 +911,24 @@ export default function DeanDashboard() {
       setSelectedStudents([]);
     } else {
       setSelectedStudents(pendingStudents.map(s => s.id));
+    }
+  };
+
+  const handleDiscardDraft = async (draftId: number) => {
+    if (!confirm("Delete this draft exam? This cannot be undone.")) return;
+    setDiscardingDraft(draftId);
+    const token = localStorage.getItem("access_token");
+    try {
+      await fetch(`${API_URL}/exams/${draftId}/discard-draft/`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDraftExams((prev) => prev.filter((d) => d.id !== draftId));
+      toast.success("Draft exam deleted.");
+    } catch {
+      toast.error("Failed to delete draft.");
+    } finally {
+      setDiscardingDraft(null);
     }
   };
 

@@ -53,6 +53,23 @@ export default function AddQuestions() {
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [questionsSaved, setQuestionsSaved] = useState(false);
+
+  // Discard the draft exam if the user leaves without saving questions
+  useEffect(() => {
+    if (!examId) return;
+    const discard = () => {
+      if (questionsSaved) return;
+      const token = localStorage.getItem("access_token");
+      if (!token) return;
+      navigator.sendBeacon(
+        `${API_URL}/exams/${examId}/discard-draft/`,
+        new Blob([JSON.stringify({})], { type: "application/json" })
+      );
+    };
+    window.addEventListener("beforeunload", discard);
+    return () => window.removeEventListener("beforeunload", discard);
+  }, [examId, questionsSaved]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -144,6 +161,7 @@ export default function AddQuestions() {
 
       if (!res.ok) throw new Error("Failed to save questions");
 
+      setQuestionsSaved(true);
       router.push(dashboardHref);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to save questions");
@@ -182,6 +200,7 @@ export default function AddQuestions() {
       }
 
       alert(`Successfully imported ${data.count} questions!`);
+      setQuestionsSaved(true);
       router.push(dashboardHref);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to import questions";
@@ -191,6 +210,18 @@ export default function AddQuestions() {
       setImporting(false);
       setShowImportModal(false);
     }
+  };
+
+  const discardDraft = async () => {
+    if (questionsSaved) return;
+    const token = localStorage.getItem("access_token");
+    if (!token || !examId) return;
+    try {
+      await fetch(`${API_URL}/exams/${examId}/discard-draft/`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {}
   };
 
   const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
@@ -213,20 +244,43 @@ export default function AddQuestions() {
 
         <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="mb-8">
-            <Link href={dashboardHref} className="text-sky-600 hover:text-sky-700 font-medium">
-              ← Back to Dashboard
-            </Link>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Link
+                href={examDetailsHref}
+                onClick={discardDraft}
+                className="inline-flex items-center gap-1 text-sky-600 hover:text-sky-700 font-medium text-sm"
+              >
+                ← Back to Exam Details
+              </Link>
+              <span className="text-slate-300">|</span>
+              <Link
+                href={dashboardHref}
+                onClick={discardDraft}
+                className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-700 font-medium text-sm"
+              >
+                Dashboard
+              </Link>
+            </div>
             <div className="flex justify-between items-center mt-4">
               <div>
                 <h1 className="text-3xl font-bold text-slate-900 mb-2">Add Questions</h1>
                 <p className="text-slate-600">{exam?.title} - {exam?.subject}</p>
               </div>
-              <button
-                onClick={() => setShowImportModal(true)}
-                className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-medium flex items-center gap-2"
-              >
-                📄 Import from CSV
-              </button>
+              <div className="flex items-center gap-3">
+                <a
+                  href="/sample_questions_template.csv"
+                  download="questions_template.csv"
+                  className="px-5 py-3 bg-white border border-sky-300 text-sky-700 rounded-xl hover:bg-sky-50 transition-all font-medium flex items-center gap-2 text-sm"
+                >
+                  ⬇️ Download CSV Template
+                </a>
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-medium flex items-center gap-2"
+                >
+                  📄 Import from CSV
+                </button>
+              </div>
             </div>
           </div>
 
@@ -380,6 +434,7 @@ export default function AddQuestions() {
           <div className="flex gap-4">
             <Link
               href={dashboardHref}
+              onClick={discardDraft}
               className="flex-1 px-6 py-3 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium text-center"
             >
               Cancel
@@ -399,20 +454,26 @@ export default function AddQuestions() {
               <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
                 <h3 className="text-2xl font-bold text-slate-900 mb-4">Import Questions from CSV</h3>
                 
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-                  <h4 className="font-semibold text-blue-900 mb-2">CSV Format Requirements:</h4>
-                  <ul className="text-sm text-blue-800 space-y-1">
-                    <li>- Columns: question, type, options, correct_answer, points</li>
-                    <li>- Types: multiple_choice, identification, essay, enumeration</li>
-                    <li>- Options: Separate with | (pipe) for multiple choice</li>
-                    <li>- Example: &quot;Paris|London|Berlin|Madrid&quot;</li>
-                  </ul>
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4 text-sm text-slate-700 space-y-1">
+                  <p className="font-semibold text-slate-900 mb-2">Required columns:</p>
+                  <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">question</span> — the question text</p>
+                  <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">type</span> — <span className="font-mono">multiple_choice</span> | <span className="font-mono">identification</span> | <span className="font-mono">enumeration</span> | <span className="font-mono">essay</span></p>
+                  <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">options</span> — for multiple choice only, separate with <span className="font-mono">|</span> e.g. <span className="font-mono">A|B|C|D</span></p>
+                  <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">correct_answer</span> — exact answer text</p>
+                  <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">points</span> — numeric value e.g. <span className="font-mono">2</span></p>
+                  <p className="pt-1 text-amber-700 font-medium">⚠️ Importing replaces all existing questions for this exam.</p>
                 </div>
 
+                <a
+                  href="/sample_questions_template.csv"
+                  download="questions_template.csv"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 mb-4 bg-sky-50 border border-sky-300 text-sky-700 rounded-xl hover:bg-sky-100 transition-all font-semibold text-sm"
+                >
+                  ⬇️ Download CSV Template
+                </a>
+
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Select CSV File
-                  </label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Select CSV File</label>
                   <input
                     type="file"
                     accept=".csv"
@@ -420,10 +481,6 @@ export default function AddQuestions() {
                     disabled={importing}
                     className="w-full px-4 py-3 border border-sky-200 rounded-xl bg-white focus:ring-2 focus:ring-sky-500"
                   />
-                </div>
-
-                <div className="text-xs text-slate-500 mb-4">
-                  <p>⚠️ Warning: Importing will replace all existing questions</p>
                 </div>
 
                 <div className="flex gap-3">
@@ -434,13 +491,6 @@ export default function AddQuestions() {
                   >
                     Cancel
                   </button>
-                  <a
-                    href="/sample_questions_template.csv"
-                    download
-                    className="flex-1 px-4 py-2 bg-sky-600 text-white rounded-xl hover:bg-sky-700 transition-all text-center"
-                  >
-                    Download Template
-                  </a>
                 </div>
               </div>
             </div>
