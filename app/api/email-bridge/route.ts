@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  sendPasswordResetEmail,
   sendEmailVerificationOtp,
   sendStudentApprovalEmail,
   sendStaffApprovalEmail,
@@ -51,6 +52,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ detail: "emailType is required." }, { status: 400 });
 
     switch (emailType as string) {
+      case "password_reset":
+        await sendPasswordResetEmail(data.to, data.firstName, data.otp, data.frontendUrl);
+        break;
+
       case "email_verification_otp":
         await sendEmailVerificationOtp(data.to, data.firstName, data.otp);
         break;

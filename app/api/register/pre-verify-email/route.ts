@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { sendEmailChangeOtp } from "@/lib/mailer";
+import { sendEmailVerificationOtp } from "@/lib/mailer";
 
 const BACKEND = "https://scsitonlineexambackend.onrender.com";
 
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await sendEmailChangeOtp(email, data.otp);
+    await sendEmailVerificationOtp(email, "there", data.otp);
 
     return NextResponse.json({ message: `OTP sent to ${email}` });
   } catch (err) {
