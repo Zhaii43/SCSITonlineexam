@@ -1,37 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendStudentRejectedEmail } from "@/lib/mailer";
+import { getServerBackendUrl } from "@/lib/server-backend-url";
 
-const BACKEND = "https://scsitonlineexambackend.onrender.com";
-const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ?? "https://scsi-tonlineexam.vercel.app";
 export const runtime = "nodejs";
+const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ?? "https://scsi-tonlineexam.vercel.app";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const authorization = request.headers.get("authorization") ?? "";
   const body = await request.json().catch(() => ({}));
+  const backendUrl = getServerBackendUrl();
 
-  const res = await fetch(`${BACKEND}/api/students/${id}/reject/`, {
+  const res = await fetch(`${backendUrl}/api/students/${id}/reject/`, {
     method: "POST",
     headers: { Authorization: authorization, "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    cache: "no-store",
   });
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) return NextResponse.json(data, { status: res.status });
 
   if (data.student_email) {
-    sendStudentRejectedEmail(
-      data.student_email,
-      {
-        firstName: data.student_first_name ?? "there",
-        fullName: [data.student_first_name, data.student_last_name].filter(Boolean).join(" ") || undefined,
-        schoolId: data.student_school_id,
-        department: data.student_department,
-        yearLevel: data.student_year_level,
-        rejectionReason: data.rejection_reason ?? null,
-      },
-      FRONTEND_URL,
-    ).catch(() => {});
+    try {
+      await sendStudentRejectedEmail(data.student_email, data.student_first_name ?? "there", data.rejection_reason ?? null, FRONTEND_URL);
+    } catch (err) {
+      console.error("[student/reject] email error:", err);
+    }
   }
 
   return NextResponse.json(data);

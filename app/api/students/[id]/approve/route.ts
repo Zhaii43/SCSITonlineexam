@@ -22,9 +22,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (data.student_email) {
     try {
       await sendStudentApprovalEmail(data.student_email, data.student_first_name ?? "there", FRONTEND_URL);
-      console.log("[approve] email sent to", data.student_email);
     } catch (err) {
-      console.error("[approve] email failed:", err);
+      console.error("[student/approve] email error:", err);
     }
   }
 
