@@ -18,17 +18,30 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     cache: "no-store",
   });
 
-  const text = await res.text();
-  if (!res.ok) return new NextResponse(text, { status: res.status });
-
-  const data = JSON.parse(text);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) return NextResponse.json(data, { status: res.status });
 
   const e = data.instructor_email_data;
   if (e?.to) {
-    sendIssueReportEmail(e.to, e.firstName, {
-      id: e.reportId, examTitle: e.examTitle, questionOrder: e.questionOrder,
-      issueType: e.issueType, reportedAnswer: e.reportedAnswer ?? null, description: e.description,
-    }, e.actorName, e.role === "dean" ? "dean" : "instructor", FRONTEND_URL).catch(() => {});
+    try {
+      await sendIssueReportEmail(
+        e.to,
+        e.firstName ?? "there",
+        {
+          id: e.reportId,
+          examTitle: e.examTitle,
+          questionOrder: e.questionOrder,
+          issueType: e.issueType,
+          reportedAnswer: e.reportedAnswer ?? null,
+          description: e.description,
+        },
+        e.actorName,
+        e.role === "dean" ? "dean" : "instructor",
+        FRONTEND_URL
+      );
+    } catch (err) {
+      console.error("[exam/issue-report] email error:", err);
+    }
   }
 
   return NextResponse.json(data, { status: res.status });
