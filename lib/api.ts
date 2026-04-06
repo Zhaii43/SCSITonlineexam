@@ -64,10 +64,6 @@ const PROXY_PATTERNS: Array<{ match: RegExp; proxy: (url: string) => string }> =
     match: /\/api\/exams\/result\/(\d+)\/grade\//,
     proxy: (url) => url.replace(/.*\/api\/exams\/result\/(\d+)\/grade\//, '/api/exams/results/$1/grade'),
   },
-  {
-    match: /\/api\/exams\/results\/(\d+)\/grade\//,
-    proxy: (url) => url.replace(/.*\/api\/exams\/results\/(\d+)\/grade\//, '/api/exams/results/$1/grade'),
-  },
 ];
 
 function resolveProxyUrl(input: RequestInfo): RequestInfo {

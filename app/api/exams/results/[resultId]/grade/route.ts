@@ -5,7 +5,7 @@ import { getServerBackendUrl } from "@/lib/server-backend-url";
 export const runtime = "nodejs";
 const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ?? "https://scsi-tonlineexam.vercel.app";
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string; resultId: string }> }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ resultId: string }> }) {
   const { resultId } = await params;
   const authorization = request.headers.get("authorization") ?? "";
   const body = await request.json().catch(() => ({}));
@@ -19,7 +19,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   });
 
   const text = await res.text();
-  if (!res.ok) return new NextResponse(text, { status: res.status });
+  const contentType = res.headers.get("content-type") ?? "";
+
+  if (!res.ok) {
+    return new NextResponse(text, { status: res.status, headers: { "Content-Type": contentType || "application/json" } });
+  }
 
   const data = JSON.parse(text);
 
