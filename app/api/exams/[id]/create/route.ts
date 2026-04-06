@@ -24,11 +24,15 @@ export async function POST(request: NextRequest) {
 
   if (data.dean_email_data?.to) {
     const e = data.dean_email_data;
-    sendDeanExamCreatedEmail(e.to, e.fullName, {
-      id: e.examId, title: e.examTitle, subject: e.subject,
-      department: e.department, examType: e.examType,
-      scheduledDate: e.scheduledDate, yearLevel: e.yearLevel,
-    }, FRONTEND_URL).catch(() => {});
+    try {
+      await sendDeanExamCreatedEmail(e.to, e.fullName, {
+        id: e.examId, title: e.examTitle, subject: e.subject,
+        department: e.department, examType: e.examType,
+        scheduledDate: e.scheduledDate, yearLevel: e.yearLevel,
+      }, FRONTEND_URL);
+    } catch (err) {
+      console.error("[exam/create] email error:", err);
+    }
   }
 
   return NextResponse.json(data, { status: res.status });

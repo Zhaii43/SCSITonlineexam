@@ -26,9 +26,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const emailList: Array<{ to: string; firstName: string; examTitle: string; examSubject: string; scheduledDate: string; extraMinutes: number; reason: string }> = data.email_data ?? [];
   for (const e of emailList) {
     if (e.to) {
-      sendTimeExtensionEmail(e.to, e.firstName, {
-        title: e.examTitle, subject: e.examSubject, scheduledDate: e.scheduledDate,
-      }, e.extraMinutes, e.reason, FRONTEND_URL).catch(() => {});
+      try {
+        await sendTimeExtensionEmail(e.to, e.firstName, {
+          title: e.examTitle, subject: e.examSubject, scheduledDate: e.scheduledDate,
+        }, e.extraMinutes, e.reason, FRONTEND_URL);
+      } catch (err) {
+        console.error("[exam/extend-time] email error for", e.to, err);
+      }
     }
   }
 

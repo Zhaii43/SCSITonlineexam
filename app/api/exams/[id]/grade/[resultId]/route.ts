@@ -25,11 +25,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (data.email_data?.to) {
     const e = data.email_data;
-    sendResultsPublishedEmail(e.to, e.firstName, {
-      examTitle: e.examTitle, subject: e.subject,
-      score: e.score, totalItems: e.totalItems,
-      percentage: e.percentage, passed: e.passed, dateTaken: e.dateTaken,
-    }, FRONTEND_URL).catch(() => {});
+    try {
+      await sendResultsPublishedEmail(e.to, e.firstName, {
+        examTitle: e.examTitle, subject: e.subject,
+        score: e.score, totalItems: e.totalItems,
+        percentage: e.percentage, passed: e.passed, dateTaken: e.dateTaken,
+      }, FRONTEND_URL);
+    } catch (err) {
+      console.error("[exam/grade] email error:", err);
+    }
   }
 
   return NextResponse.json(data, { status: res.status });
