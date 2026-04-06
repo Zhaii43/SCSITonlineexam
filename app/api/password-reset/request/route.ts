@@ -34,8 +34,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: `A 6-digit verification code has been sent to ${email}` });
   } catch (err) {
     console.error("[password-reset/request] error:", err);
+    const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
-      { error: "Unable to send password reset email right now. Please try again later." },
+      { error: message },
       { status: 503 }
     );
   }
