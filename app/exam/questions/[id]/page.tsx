@@ -133,7 +133,7 @@ export default function AddQuestions() {
     const token = localStorage.getItem("access_token");
     
     try {
-      const res = await fetch(`${API_URL}/exams/${examId}/questions/`, {
+      const res = await fetch(`/api/exams/${examId}/questions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
