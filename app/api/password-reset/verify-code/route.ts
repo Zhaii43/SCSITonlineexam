@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { API_URL } from "@/lib/api";
+import { getServerBackendUrl } from "@/lib/server-backend-url";
 import { extractUpstreamMessage } from "@/lib/upstream-response";
+
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
-    const backendUrl = (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? API_URL).replace(/\/api$/, "");
+    const backendUrl = getServerBackendUrl();
     const res = await fetch(`${backendUrl}/api/password-reset/verify-code/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -35,9 +37,10 @@ export async function POST(request: NextRequest) {
       { message: extractUpstreamMessage(text, "Code verified.") },
       { status: res.status }
     );
-  } catch {
+  } catch (error) {
+    console.error("[password-reset/verify-code] error:", error);
     return NextResponse.json(
-      { error: "Unable to reach the backend service right now. Please try again." },
+      { error: "Unable to reach the password reset service right now. Please try again." },
       { status: 503 }
     );
   }

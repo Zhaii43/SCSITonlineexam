@@ -1,16 +1,41 @@
 import * as nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST ?? "smtp.gmail.com",
-  port: Number(process.env.EMAIL_PORT ?? 587),
-  secure: process.env.EMAIL_SECURE === "true",
-  auth: {
-    user: process.env.EMAIL_USER!,
-    pass: process.env.EMAIL_PASS!,
-  },
-});
+function requireEnv(name: "EMAIL_USER" | "EMAIL_PASS") {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`Missing required email configuration: ${name}`);
+  }
+  return value;
+}
 
-const FROM = process.env.EMAIL_FROM ?? `SCSIT Online Exam <${process.env.EMAIL_USER}>`;
+function createTransporter() {
+  const user = requireEnv("EMAIL_USER");
+  const pass = requireEnv("EMAIL_PASS");
+
+  return nodemailer.createTransport({
+    host: process.env.EMAIL_HOST ?? "smtp.gmail.com",
+    port: Number(process.env.EMAIL_PORT ?? 587),
+    secure: process.env.EMAIL_SECURE === "true",
+    auth: {
+      user,
+      pass,
+    },
+  });
+}
+
+function getFromAddress() {
+  const configured = process.env.EMAIL_FROM?.trim();
+  if (configured) {
+    return configured;
+  }
+
+  const user = process.env.EMAIL_USER?.trim();
+  if (user) {
+    return `SCSIT Online Exam <${user}>`;
+  }
+
+  throw new Error("Missing required email configuration: EMAIL_FROM or EMAIL_USER");
+}
 
 export async function sendPasswordResetEmail(
   to: string,
@@ -18,8 +43,9 @@ export async function sendPasswordResetEmail(
   otp: string,
   frontendUrl: string
 ) {
+  const transporter = createTransporter();
   await transporter.sendMail({
-    from: FROM,
+    from: getFromAddress(),
     to,
     subject: "Password Reset Request",
     html: `
@@ -36,8 +62,9 @@ export async function sendPasswordResetEmail(
 }
 
 export async function sendEmailChangeOtp(to: string, otp: string) {
+  const transporter = createTransporter();
   await transporter.sendMail({
-    from: FROM,
+    from: getFromAddress(),
     to,
     subject: "Verify Your Email - SCSIT Online Exam",
     html: `
