@@ -180,6 +180,14 @@ export default function AddQuestions() {
       const data = await res.json();
 
       if (!res.ok) {
+        // Show mismatched department rows clearly
+        if (data.mismatched_rows?.length) {
+          const details = data.mismatched_rows
+            .slice(0, 5)
+            .map((r: any) => `Row ${r.row}: "${r.question}..." (department: ${r.department})`)
+            .join('\n');
+          throw new Error(`${data.error}\n\n${details}`);
+        }
         throw new Error(data.error || 'Failed to import questions');
       }
 
@@ -441,6 +449,7 @@ export default function AddQuestions() {
                   <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">options</span> — for multiple choice only, separate with <span className="font-mono">|</span> e.g. <span className="font-mono">A|B|C|D</span></p>
                   <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">correct_answer</span> — exact answer text</p>
                   <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">points</span> — numeric value e.g. <span className="font-mono">2</span></p>
+                  <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">department</span> — must match this exam&apos;s department (e.g. <span className="font-mono">BSIT</span>, <span className="font-mono">BSED</span>). Rows with a different department will be <span className="text-red-600 font-semibold">rejected</span>. Leave blank to skip the check.</p>
                   <p className="pt-1 text-amber-700 font-medium">⚠️ Importing replaces all existing questions for this exam.</p>
                 </div>
 
