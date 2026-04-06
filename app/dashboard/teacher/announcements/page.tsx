@@ -13,6 +13,7 @@ interface Announcement {
   message: string;
   target_audience: string;
   department: string | null;
+  year_level: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -43,6 +44,14 @@ const AUDIENCE_COLORS: Record<string, string> = {
   instructor: "bg-green-100 text-green-700",
 };
 
+const YEAR_LEVELS = [
+  { value: "", label: "All Year Levels" },
+  { value: "1", label: "1st Year" },
+  { value: "2", label: "2nd Year" },
+  { value: "3", label: "3rd Year" },
+  { value: "4", label: "4th Year" },
+];
+
 export default function InstructorAnnouncementsPage() {
   const router = useRouter();
   const toast = useToast();
@@ -50,7 +59,7 @@ export default function InstructorAnnouncementsPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
-  const [form, setForm] = useState({ title: "", message: "", target_audience: "all", department: "" });
+  const [form, setForm] = useState({ title: "", message: "", target_audience: "all", department: "", year_level: "" });
   const [formError, setFormError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
 
@@ -113,13 +122,14 @@ export default function InstructorAnnouncementsPage() {
           message: form.message.trim(),
           target_audience: form.target_audience,
           department: form.department || null,
+          year_level: form.target_audience !== 'instructor' ? (form.year_level || null) : null,
         }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         throw new Error(data?.error || "Failed to post announcement.");
       }
-      setForm({ title: "", message: "", target_audience: "all", department: "" });
+      setForm({ title: "", message: "", target_audience: "all", department: "", year_level: "" });
       setFormError(null);
       toast.success("Announcement posted successfully.");
       await fetchAnnouncements(token || undefined);
@@ -272,7 +282,7 @@ export default function InstructorAnnouncementsPage() {
                     <select
                       id="teacher-announcement-audience"
                       value={form.target_audience}
-                      onChange={(e) => setForm((prev) => ({ ...prev, target_audience: e.target.value }))}
+                      onChange={(e) => setForm((prev) => ({ ...prev, target_audience: e.target.value, year_level: "" }))}
                       className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
                     >
                       <option value="all">Everyone</option>
@@ -295,11 +305,27 @@ export default function InstructorAnnouncementsPage() {
                   </div>
                 </div>
 
+                {form.target_audience !== "instructor" && (
+                  <div>
+                    <label htmlFor="teacher-announcement-year-level" className="mb-1 block text-sm font-medium text-slate-700">Year Level <span className="text-slate-400 font-normal">(students)</span></label>
+                    <select
+                      id="teacher-announcement-year-level"
+                      value={form.year_level}
+                      onChange={(e) => setForm((prev) => ({ ...prev, year_level: e.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    >
+                      {YEAR_LEVELS.map((yl) => (
+                        <option key={yl.value} value={yl.value}>{yl.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                   <button
                     type="button"
                     onClick={() => {
-                      setForm({ title: "", message: "", target_audience: "all", department: "" });
+                      setForm({ title: "", message: "", target_audience: "all", department: "", year_level: "" });
                       setFormError(null);
                     }}
                     className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -387,6 +413,11 @@ export default function InstructorAnnouncementsPage() {
                             {announcement.department && (
                               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                                 {announcement.department}
+                              </span>
+                            )}
+                            {announcement.year_level && (
+                              <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+                                {YEAR_LEVELS.find((yl) => yl.value === announcement.year_level)?.label ?? `Year ${announcement.year_level}`}
                               </span>
                             )}
                             <span className="text-xs text-slate-400">{getTimeAgo(announcement.created_at)}</span>

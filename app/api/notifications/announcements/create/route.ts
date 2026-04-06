@@ -44,8 +44,9 @@ export async function POST(request: NextRequest) {
       const usersData = await usersRes.json().catch(() => ({}));
       const targetAudience = String(body.target_audience ?? "all");
       const department = String(body.department ?? "");
+      const yearLevel = String(body.year_level ?? "");
 
-      let recipients: Array<{ email?: string; first_name?: string; department?: string }> = [];
+      let recipients: Array<{ email?: string; first_name?: string; department?: string; year_level?: string }> = [];
       if (targetAudience === "all" || targetAudience === "student") {
         recipients = recipients.concat(usersData.students ?? []);
       }
@@ -54,6 +55,9 @@ export async function POST(request: NextRequest) {
       }
       if (department) {
         recipients = recipients.filter((u) => !u.department || u.department === department);
+      }
+      if (yearLevel && targetAudience !== "instructor") {
+        recipients = recipients.filter((u) => !(usersData.students ?? []).includes(u) || !u.year_level || u.year_level === yearLevel);
       }
 
       const announcement = {
