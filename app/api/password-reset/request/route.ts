@@ -1,46 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getServerBackendUrl } from "@/lib/server-backend-url";
-import { extractUpstreamMessage } from "@/lib/upstream-response";
+import { sendPasswordResetEmail } from "@/lib/mailer";
+
+const BACKEND = "https://scsitonlineexambackend.onrender.com";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  let email = "";
   try {
-    const body = await request.text();
-    const backendUrl = getServerBackendUrl();
-    const res = await fetch(`${backendUrl}/api/password-reset/request/`, {
+    const body = await request.json();
+    email = (body.email ?? "").trim().toLowerCase();
+
+    const res = await fetch(`${BACKEND}/api/password-reset/generate-otp/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body,
+      body: JSON.stringify({ email }),
       cache: "no-store",
     });
 
-    const text = await res.text();
-    const contentType = res.headers.get("content-type") ?? "";
-
-    if (contentType.includes("application/json")) {
-      return new NextResponse(text, {
-        status: res.status,
-        headers: { "Content-Type": contentType },
-      });
-    }
+    const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
       return NextResponse.json(
-        { error: extractUpstreamMessage(text, "Unable to send password reset email right now. Please try again later.") },
+        { error: data.error ?? "Unable to send password reset email right now. Please try again later." },
         { status: res.status }
       );
     }
 
+    const { otp, first_name, frontend_url } = data;
+    await sendPasswordResetEmail(email, first_name ?? "there", otp, frontend_url ?? "https://scsi-tonlineexam.vercel.app");
+
+    return NextResponse.json({ message: `A 6-digit verification code has been sent to ${email}` });
+  } catch (err) {
+    console.error("[password-reset/request] error:", err);
+    const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
-      { message: extractUpstreamMessage(text, "A password reset code has been sent if the account exists.") },
-      { status: res.status }
-    );
-  } catch (error) {
-    console.error("[password-reset/request] error:", error);
-    return NextResponse.json(
-      { error: "Unable to reach the password reset service right now. Please try again." },
+      { error: message },
       { status: 503 }
     );
   }

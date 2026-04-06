@@ -1,47 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getServerBackendUrl } from "@/lib/server-backend-url";
-import { extractUpstreamMessage } from "@/lib/upstream-response";
+import { sendEmailVerificationOtp } from "@/lib/mailer";
+
+const BACKEND = "https://scsitonlineexambackend.onrender.com";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  let email = "";
   try {
-    const body = await request.text();
-    const backendUrl = getServerBackendUrl();
-    const res = await fetch(`${backendUrl}/api/register/pre-verify-email/`, {
+    const body = await request.json();
+    email = (body.email ?? "").trim().toLowerCase();
+
+    const res = await fetch(`${BACKEND}/api/register/generate-pre-verify-otp/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body,
+      body: JSON.stringify({ email }),
       cache: "no-store",
     });
 
-    const text = await res.text();
-    const contentType = res.headers.get("content-type") ?? "";
-
-    if (contentType.includes("application/json")) {
-      return new NextResponse(text, {
-        status: res.status,
-        headers: { "Content-Type": contentType },
-      });
-    }
+    const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
       return NextResponse.json(
-        { error: extractUpstreamMessage(text, "Unable to send OTP email right now. Please try again later.") },
+        { error: data.error ?? "Unable to send OTP email right now. Please try again later." },
         { status: res.status }
       );
     }
 
-    return NextResponse.json(
-      { message: extractUpstreamMessage(text, "OTP sent.") },
-      { status: res.status }
-    );
-  } catch (error) {
-    console.error("[register/pre-verify-email] error:", error);
-    return NextResponse.json(
-      { error: "Unable to reach the verification service right now. Please try again." },
-      { status: 503 }
-    );
+    await sendEmailVerificationOtp(email, "there", data.otp);
+
+    return NextResponse.json({ message: `OTP sent to ${email}` });
+  } catch (err) {
+    console.error("[register/pre-verify-email] error:", err);
+    const message = err instanceof Error ? err.message : "Unable to send OTP. Please try again.";
+    return NextResponse.json({ error: message }, { status: 503 });
   }
 }
