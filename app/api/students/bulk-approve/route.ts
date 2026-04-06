@@ -30,10 +30,31 @@ export async function POST(request: NextRequest) {
     fetch(`${backendUrl}/api/department/users/`, {
       headers: { Authorization: authorization },
     }).then(r => r.json()).then(users => {
-      const students: Array<{ id: number; email: string; first_name: string }> = users.students ?? [];
+      const students: Array<{
+        id: number;
+        email: string;
+        first_name?: string;
+        last_name?: string;
+        username?: string;
+        school_id?: string;
+        department?: string;
+        year_level?: string;
+      }> = users.students ?? [];
       for (const s of students) {
         if (studentIds.includes(s.id) && s.email) {
-          sendStudentApprovalEmail(s.email, s.first_name ?? "there", FRONTEND_URL).catch(() => {});
+          sendStudentApprovalEmail(
+            s.email,
+            {
+              firstName: s.first_name ?? "there",
+              fullName: [s.first_name, s.last_name].filter(Boolean).join(" ") || undefined,
+              username: s.username,
+              email: s.email,
+              schoolId: s.school_id,
+              department: s.department,
+              yearLevel: s.year_level,
+            },
+            FRONTEND_URL,
+          ).catch(() => {});
         }
       }
     }).catch(() => {});

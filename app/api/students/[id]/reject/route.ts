@@ -20,7 +20,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!res.ok) return NextResponse.json(data, { status: res.status });
 
   if (data.student_email) {
-    sendStudentRejectedEmail(data.student_email, data.student_first_name ?? "there", data.rejection_reason ?? null, FRONTEND_URL).catch(() => {});
+    sendStudentRejectedEmail(
+      data.student_email,
+      {
+        firstName: data.student_first_name ?? "there",
+        fullName: [data.student_first_name, data.student_last_name].filter(Boolean).join(" ") || undefined,
+        schoolId: data.student_school_id,
+        department: data.student_department,
+        yearLevel: data.student_year_level,
+        rejectionReason: data.rejection_reason ?? null,
+      },
+      FRONTEND_URL,
+    ).catch(() => {});
   }
 
   return NextResponse.json(data);

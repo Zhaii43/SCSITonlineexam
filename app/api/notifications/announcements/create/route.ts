@@ -62,7 +62,7 @@ async function sendAnnouncementEmails(authorization: string, body: Record<string
   const targetAudience = String(body.target_audience ?? "all");
   const department = String(body.department ?? "");
 
-  let recipients: Array<{ email?: string; first_name?: string; department?: string }> = [];
+  let recipients: Array<{ email?: string; first_name?: string; last_name?: string; department?: string }> = [];
   if (targetAudience === "all" || targetAudience === "student") {
     recipients = recipients.concat(usersData.students ?? []);
   }
@@ -80,11 +80,23 @@ async function sendAnnouncementEmails(authorization: string, body: Record<string
     createdAt: new Date().toLocaleDateString("en-US", {
       year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
     }),
+    targetAudience,
+    department: department || "All Departments",
   };
 
   await Promise.allSettled(
     recipients
       .filter((r) => r.email)
-      .map((r) => sendAnnouncementEmail(r.email!, r.first_name ?? "there", announcement, FRONTEND_URL))
+      .map((r) =>
+        sendAnnouncementEmail(
+          r.email!,
+          {
+            firstName: r.first_name ?? "there",
+            fullName: [r.first_name, r.last_name].filter(Boolean).join(" ") || undefined,
+          },
+          announcement,
+          FRONTEND_URL,
+        )
+      )
   );
 }
