@@ -18,7 +18,11 @@ export async function POST(request: NextRequest) {
   });
 
   const text = await res.text();
-  if (!res.ok) return new NextResponse(text, { status: res.status });
+  const contentType = res.headers.get("content-type") ?? "";
+
+  if (!res.ok) {
+    return new NextResponse(text, { status: res.status, headers: { "Content-Type": contentType || "application/json" } });
+  }
 
   const data = JSON.parse(text);
 
