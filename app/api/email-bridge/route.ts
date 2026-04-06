@@ -1,55 +1,72 @@
 import { NextResponse } from "next/server";
+
 import {
-  sendPasswordResetEmail,
-  sendEmailVerificationOtp,
-  sendStudentApprovalEmail,
-  sendStaffApprovalEmail,
-  sendStudentRejectedEmail,
-  sendExamScheduledEmail,
-  sendDeanExamCreatedEmail,
-  sendResultsPublishedEmail,
-  sendBulkImportEmail,
   sendAnnouncementEmail,
-  sendTimeExtensionEmail,
+  sendBulkImportEmail,
+  sendDeanExamCreatedEmail,
+  sendEmailVerificationOtp,
   sendExamRejectedEmail,
+  sendExamScheduledEmail,
   sendIssueReportEmail,
   sendIssueReportReplyEmail,
+  sendPasswordResetEmail,
+  sendResultsPublishedEmail,
+  sendStaffApprovalEmail,
+  sendStudentApprovalEmail,
+  sendStudentRejectedEmail,
+  sendTimeExtensionEmail,
 } from "@/lib/mailer";
 
 export const runtime = "nodejs";
 
 const getRequiredEnv = (key: string): string => {
   const value = process.env[key]?.trim();
-  if (!value) throw new Error(`Missing required environment variable: ${key}`);
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
   return value;
 };
 
 const formatError = (error: unknown): string => {
-  if (!(error instanceof Error)) return "Failed to send email.";
-  const msg = error.message.trim();
-  const low = msg.toLowerCase();
+  if (!(error instanceof Error)) {
+    return "Failed to send email.";
+  }
+  const message = error.message.trim();
+  const lowered = message.toLowerCase();
   const err = error as Error & { code?: string };
-  if (msg.startsWith("Missing required environment variable:")) return msg;
-  if (err.code === "EAUTH" || low.includes("invalid login") || low.includes("username and password not accepted"))
+
+  if (message.startsWith("Missing required environment variable:")) {
+    return message;
+  }
+  if (
+    err.code === "EAUTH" ||
+    lowered.includes("invalid login") ||
+    lowered.includes("username and password not accepted")
+  ) {
     return "Gmail authentication failed. Check MAILER_GMAIL_USER and MAILER_GMAIL_APP_PASSWORD.";
-  if (low.includes("daily user sending quota exceeded"))
+  }
+  if (lowered.includes("daily user sending quota exceeded")) {
     return "The Gmail sending limit was reached. Try again later.";
-  return msg || "Failed to send email.";
+  }
+  return message || "Failed to send email.";
 };
 
 export async function POST(request: Request) {
   try {
     const expectedSecret = getRequiredEnv("EMAIL_BRIDGE_SECRET");
     const receivedSecret = request.headers.get("x-email-bridge-secret")?.trim();
-    if (!receivedSecret || receivedSecret !== expectedSecret)
+
+    if (!receivedSecret || receivedSecret !== expectedSecret) {
       return NextResponse.json({ detail: "Unauthorized email bridge request." }, { status: 401 });
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const body = (await request.json()) as Record<string, any>;
     const { emailType, ...data } = body;
 
-    if (!emailType)
+    if (!emailType) {
       return NextResponse.json({ detail: "emailType is required." }, { status: 400 });
+    }
 
     switch (emailType as string) {
       case "password_reset":
@@ -61,7 +78,20 @@ export async function POST(request: Request) {
         break;
 
       case "student_approval":
-        await sendStudentApprovalEmail(data.to, data.firstName, data.frontendUrl);
+        await sendStudentApprovalEmail(
+          data.to,
+          {
+            firstName: data.firstName,
+            fullName: data.fullName,
+            username: data.username,
+            email: data.email,
+            schoolId: data.schoolId,
+            department: data.department,
+            yearLevel: data.yearLevel,
+            approvedAt: data.approvedAt,
+          },
+          data.frontendUrl,
+        );
         break;
 
       case "staff_approval":
@@ -69,11 +99,30 @@ export async function POST(request: Request) {
         break;
 
       case "student_rejected":
-        await sendStudentRejectedEmail(data.to, data.firstName, data.rejectionReason ?? null, data.frontendUrl);
+        await sendStudentRejectedEmail(
+          data.to,
+          {
+            firstName: data.firstName,
+            fullName: data.fullName,
+            schoolId: data.schoolId,
+            department: data.department,
+            yearLevel: data.yearLevel,
+            rejectionReason: data.rejectionReason ?? null,
+          },
+          data.frontendUrl,
+        );
         break;
 
       case "exam_scheduled":
-        await sendExamScheduledEmail(data.to, data.firstName, data.exam, data.frontendUrl);
+        await sendExamScheduledEmail(
+          data.to,
+          {
+            firstName: data.firstName,
+            fullName: data.fullName,
+          },
+          data.exam,
+          data.frontendUrl,
+        );
         break;
 
       case "dean_exam_created":
@@ -89,7 +138,15 @@ export async function POST(request: Request) {
         break;
 
       case "announcement":
-        await sendAnnouncementEmail(data.to, data.firstName, data.announcement, data.frontendUrl);
+        await sendAnnouncementEmail(
+          data.to,
+          {
+            firstName: data.firstName,
+            fullName: data.fullName,
+          },
+          data.announcement,
+          data.frontendUrl,
+        );
         break;
 
       case "time_extension":
