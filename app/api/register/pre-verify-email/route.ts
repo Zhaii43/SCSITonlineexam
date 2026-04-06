@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { sendEmailVerificationOtp } from "@/lib/mailer";
+import { getServerBackendUrl } from "@/lib/server-backend-url";
 
-const BACKEND = "https://scsitonlineexambackend.onrender.com";
+const EMAIL_BRIDGE_SECRET = process.env.EMAIL_BRIDGE_SECRET?.trim() ?? "";
 
 export const runtime = "nodejs";
 
@@ -12,23 +13,48 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     email = (body.email ?? "").trim().toLowerCase();
 
-    const res = await fetch(`${BACKEND}/api/register/generate-pre-verify-otp/`, {
+    const backendUrl = getServerBackendUrl();
+    const payload = JSON.stringify({ email });
+
+    const res = await fetch(`${backendUrl}/api/register/pre-verify-email/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: payload,
       cache: "no-store",
     });
 
     const data = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
+    if (res.ok) {
+      return NextResponse.json(data, { status: res.status });
+    }
+
+    if (res.status < 500 || !EMAIL_BRIDGE_SECRET) {
       return NextResponse.json(
         { error: data.error ?? "Unable to send OTP email right now. Please try again later." },
         { status: res.status }
       );
     }
 
-    await sendEmailVerificationOtp(email, "there", data.otp);
+    const legacyRes = await fetch(`${backendUrl}/api/register/generate-pre-verify-otp/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-email-bridge-secret": EMAIL_BRIDGE_SECRET,
+      },
+      body: payload,
+      cache: "no-store",
+    });
+    const legacyData = await legacyRes.json().catch(() => ({}));
+
+    if (!legacyRes.ok) {
+      return NextResponse.json(
+        { error: legacyData.error ?? data.error ?? "Unable to send OTP email right now. Please try again later." },
+        { status: legacyRes.status }
+      );
+    }
+
+    await sendEmailVerificationOtp(email, "there", legacyData.otp);
 
     return NextResponse.json({ message: `OTP sent to ${email}` });
   } catch (err) {
