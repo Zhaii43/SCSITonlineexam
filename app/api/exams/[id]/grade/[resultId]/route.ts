@@ -11,7 +11,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const body = await request.json().catch(() => ({}));
   const backendUrl = getServerBackendUrl();
 
-  const res = await fetch(`${backendUrl}/api/exams/results/${resultId}/grade/`, {
+  const res = await fetch(`${backendUrl}/api/exams/result/${resultId}/grade/`, {
     method: "POST",
     headers: { Authorization: authorization, "Content-Type": "application/json" },
     body: JSON.stringify(body),
