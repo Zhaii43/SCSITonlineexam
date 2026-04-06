@@ -6,7 +6,6 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import DeanShell from "@/components/DeanShell";
 import { useToast } from "@/components/ToastProvider";
-import { API_URL } from "@/lib/api";
 
 interface Announcement {
   id: number;
@@ -73,7 +72,7 @@ export default function DeanAnnouncementsPage() {
 
     try {
       setPageError(null);
-      const res = await fetch(`${API_URL}/notifications/announcements/mine/`, {
+      const res = await fetch(`/api/notifications/announcements/mine/`, {
         headers: { Authorization: `Bearer ${currentToken}` },
       });
       const data = await res.json().catch(() => null);
@@ -106,7 +105,7 @@ export default function DeanAnnouncementsPage() {
     setSubmitting(true);
     const token = localStorage.getItem("access_token");
     try {
-      const res = await fetch(`${API_URL}/notifications/announcements/create/`, {
+      const res = await fetch(`/api/notifications/announcements/create/`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -137,7 +136,7 @@ export default function DeanAnnouncementsPage() {
     if (!confirm("Delete this announcement?")) return;
     const token = localStorage.getItem("access_token");
     try {
-      const res = await fetch(`${API_URL}/notifications/announcements/${id}/delete/`, {
+      const res = await fetch(`/api/notifications/announcements/${id}/delete/`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -160,7 +159,7 @@ export default function DeanAnnouncementsPage() {
     try {
       const results = await Promise.all(
         announcements.map((announcement) =>
-          fetch(`${API_URL}/notifications/announcements/${announcement.id}/delete/`, {
+          fetch(`/api/notifications/announcements/${announcement.id}/delete/`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${token}` },
           })
