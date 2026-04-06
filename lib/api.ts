@@ -72,8 +72,10 @@ const PROXY_PATTERNS: Array<{ match: RegExp; proxy: (url: string) => string }> =
 
 function resolveProxyUrl(input: RequestInfo): RequestInfo {
   if (typeof input !== 'string') return input;
+  // Match both full backend URLs and relative paths
+  const path = input.includes('onrender.com') ? input.replace(/^https?:\/\/[^/]+/, '') : input;
   for (const { match, proxy } of PROXY_PATTERNS) {
-    if (match.test(input)) return proxy(input);
+    if (match.test(path)) return proxy(path);
   }
   return input;
 }
