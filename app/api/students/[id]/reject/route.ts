@@ -23,7 +23,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (data.student_email) {
     try {
-      await sendStudentRejectedEmail(data.student_email, data.student_first_name ?? "there", data.rejection_reason ?? null, FRONTEND_URL);
+      await sendStudentRejectedEmail(data.student_email, { firstName: data.student_first_name ?? "there", rejectionReason: data.rejection_reason ?? undefined }, FRONTEND_URL);
     } catch (err) {
       console.error("[student/reject] email error:", err);
     }

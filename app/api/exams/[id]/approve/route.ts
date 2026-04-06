@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     for (const student of students) {
       if (student.email) {
         try {
-          await sendExamScheduledEmail(student.email, student.first_name ?? "there", examPayload, FRONTEND_URL);
+          await sendExamScheduledEmail(student.email, { firstName: student.first_name ?? "there" }, examPayload, FRONTEND_URL);
         } catch (err) {
           console.error("[exam/approve] email error for", student.email, err);
         }

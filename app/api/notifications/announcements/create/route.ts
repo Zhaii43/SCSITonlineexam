@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       for (const r of recipients) {
         if (r.email) {
           try {
-            await sendAnnouncementEmail(r.email, r.first_name ?? "there", announcement, FRONTEND_URL);
+            await sendAnnouncementEmail(r.email, { firstName: r.first_name ?? "there" }, announcement, FRONTEND_URL);
           } catch (err) {
             console.error("[announcement/create] email error for", r.email, err);
           }
