@@ -371,7 +371,7 @@ export default function InstructorDashboard() {
   try {
    const body: any = { extra_minutes: mins, reason: extendReason };
    if (!bulk && extendStudentId) body.student_id = extendStudentId;
-   const res = await fetch(`${API_URL}/exams/${extendExam.id}/extend-time/`, {
+   const res = await fetch(`/api/exams/${extendExam.id}/extend-time`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),

@@ -860,7 +860,7 @@ export default function DeanDashboard() {
     
     const token = localStorage.getItem("access_token");
     try {
-      const res = await fetch(`${API_URL}/students/bulk-approve/`, {
+      const res = await fetch(`/api/students/bulk-approve`, {
         method: "POST",
         headers: { 
           Authorization: `Bearer ${token}`,

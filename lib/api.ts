@@ -33,12 +33,40 @@ const PROXY_PATTERNS: Array<{ match: RegExp; proxy: (url: string) => string }> =
     proxy: (url) => url.replace(/.*\/api\/students\/(\d+)\/reject\//, '/api/students/$1/reject'),
   },
   {
+    match: /\/api\/students\/bulk-approve\//,
+    proxy: () => '/api/students/bulk-approve',
+  },
+  {
     match: /\/api\/exams\/(\d+)\/approve\//,
     proxy: (url) => url.replace(/.*\/api\/exams\/(\d+)\/approve\//, '/api/exams/$1/approve'),
   },
   {
     match: /\/api\/exams\/(\d+)\/reject\//,
     proxy: (url) => url.replace(/.*\/api\/exams\/(\d+)\/reject\//, '/api/exams/$1/reject'),
+  },
+  {
+    match: /\/api\/exams\/(\d+)\/submit\//,
+    proxy: (url) => url.replace(/.*\/api\/exams\/(\d+)\/submit\//, '/api/exams/$1/submit'),
+  },
+  {
+    match: /\/api\/exams\/(\d+)\/extend-time\//,
+    proxy: (url) => url.replace(/.*\/api\/exams\/(\d+)\/extend-time\//, '/api/exams/$1/extend-time'),
+  },
+  {
+    match: /\/api\/exams\/(\d+)\/issue-report\//,
+    proxy: (url) => url.replace(/.*\/api\/exams\/(\d+)\/issue-report\//, '/api/exams/$1/issue-report'),
+  },
+  {
+    match: /\/api\/exams\/create\//,
+    proxy: () => '/api/exams/create',
+  },
+  {
+    match: /\/api\/exams\/result\/(\d+)\/grade\//,
+    proxy: (url) => url.replace(/.*\/api\/exams\/result\/(\d+)\/grade\//, '/api/exams/results/$1/grade'),
+  },
+  {
+    match: /\/api\/exams\/results\/(\d+)\/grade\//,
+    proxy: (url) => url.replace(/.*\/api\/exams\/results\/(\d+)\/grade\//, '/api/exams/results/$1/grade'),
   },
 ];
 

@@ -142,7 +142,7 @@ export default function GradeExam() {
     setGradingMessage(null);
 
     try {
-      const res = await fetch(`${API_URL}/exams/result/${selectedResult.id}/grade/`, {
+      const res = await fetch(`/api/exams/results/${selectedResult.id}/grade`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
