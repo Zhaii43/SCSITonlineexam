@@ -1,5 +1,6 @@
 // app/register/page.tsx
 "use client";
+import { API_URL } from "@/lib/api";
 
 import { useState } from "react";
 import Link from "next/link";
