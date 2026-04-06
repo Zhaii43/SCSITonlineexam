@@ -31,15 +31,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (exam && students.length > 0) {
     const examPayload = {
+      id: exam.id,
       title: exam.title,
       subject: exam.subject,
       department: exam.department,
       examType: exam.exam_type,
+      questionType: exam.question_type,
       scheduledDate: new Date(exam.scheduled_date).toLocaleDateString("en-US", {
         year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
       }),
+      expirationTime: exam.expiration_time
+        ? new Date(exam.expiration_time).toLocaleDateString("en-US", {
+            year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
+          })
+        : undefined,
       duration: exam.duration_minutes,
+      totalPoints: exam.total_points,
+      passingScore: exam.passing_score,
       yearLevel: exam.year_level,
+      instructions: exam.instructions,
     };
 
     for (const student of students) {
