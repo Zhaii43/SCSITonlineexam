@@ -37,6 +37,10 @@ function getFromAddress() {
   throw new Error("Missing required email configuration: EMAIL_FROM or EMAIL_USER");
 }
 
+export function hasPasswordResetMailerConfig() {
+  return Boolean(process.env.EMAIL_USER?.trim() && process.env.EMAIL_PASS?.trim());
+}
+
 export async function sendPasswordResetEmail(
   to: string,
   firstName: string,

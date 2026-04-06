@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { sendPasswordResetEmail } from "@/lib/mailer";
+import { hasPasswordResetMailerConfig, sendPasswordResetEmail } from "@/lib/mailer";
 import { getServerBackendUrl } from "@/lib/server-backend-url";
 
 export const runtime = "nodejs";
+
+async function proxyBackendResetRequest(backendUrl: string, body: unknown) {
+  const response = await fetch(`${backendUrl}/api/password-reset/request/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+
+  const data = await response.json().catch(() => ({}));
+  return NextResponse.json(data, { status: response.status });
+}
 
 export async function POST(request: NextRequest) {
   let email = "";
@@ -11,6 +23,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     email = body.email ?? "";
     const backendUrl = getServerBackendUrl();
+
+    if (!hasPasswordResetMailerConfig()) {
+      return await proxyBackendResetRequest(backendUrl, body);
+    }
 
     const res = await fetch(`${backendUrl}/api/password-reset/generate-otp/`, {
       method: "POST",
@@ -35,13 +51,7 @@ export async function POST(request: NextRequest) {
       await sendPasswordResetEmail(email, first_name, otp, resolvedFrontendUrl);
     } catch (mailError) {
       console.error("[password-reset/request] mail error:", mailError);
-
-      const errorMessage =
-        mailError instanceof Error && mailError.message.includes("Missing required email configuration")
-          ? "Password reset email is not configured. Check EMAIL_USER, EMAIL_PASS, and EMAIL_FROM."
-          : "Unable to send the password reset email right now. Please try again.";
-
-      return NextResponse.json({ error: errorMessage }, { status: 503 });
+      return await proxyBackendResetRequest(backendUrl, body);
     }
 
     return NextResponse.json({ message: `A 6-digit verification code has been sent to ${email}` });
