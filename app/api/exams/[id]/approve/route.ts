@@ -24,7 +24,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!res.ok) return NextResponse.json(data, { status: res.status });
 
   // Send exam scheduled email to all eligible students
-  const students: Array<{ email: string; first_name: string }> = examDetail?.eligible_students ?? [];
+  const students: Array<{ email: string; first_name?: string; last_name?: string }> = examDetail?.eligible_students ?? [];
   const exam = examDetail?.exam;
   if (exam && students.length > 0) {
     const examPayload = {
@@ -41,7 +41,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     };
     for (const student of students) {
       if (student.email) {
-        sendExamScheduledEmail(student.email, student.first_name ?? "there", examPayload, FRONTEND_URL).catch(() => {});
+        sendExamScheduledEmail(
+          student.email,
+          {
+            firstName: student.first_name ?? "there",
+            fullName: [student.first_name, student.last_name].filter(Boolean).join(" ") || undefined,
+          },
+          examPayload,
+          FRONTEND_URL,
+        ).catch(() => {});
       }
     }
   }
