@@ -22,6 +22,34 @@ export const API_URL = `${API_BASE_URL}/api`;
 export const WS_URL =
   process.env.NEXT_PUBLIC_WS_URL ?? "wss://scsitonlineexambackend.onrender.com";
 
+// Proxy routes — these Next.js routes call Django then send email via Nodemailer
+const PROXY_PATTERNS: Array<{ match: RegExp; proxy: (url: string) => string }> = [
+  {
+    match: /\/api\/students\/(\d+)\/approve\//,
+    proxy: (url) => url.replace(/.*\/api\/students\/(\d+)\/approve\//, '/api/students/$1/approve'),
+  },
+  {
+    match: /\/api\/students\/(\d+)\/reject\//,
+    proxy: (url) => url.replace(/.*\/api\/students\/(\d+)\/reject\//, '/api/students/$1/reject'),
+  },
+  {
+    match: /\/api\/exams\/(\d+)\/approve\//,
+    proxy: (url) => url.replace(/.*\/api\/exams\/(\d+)\/approve\//, '/api/exams/$1/approve'),
+  },
+  {
+    match: /\/api\/exams\/(\d+)\/reject\//,
+    proxy: (url) => url.replace(/.*\/api\/exams\/(\d+)\/reject\//, '/api/exams/$1/reject'),
+  },
+];
+
+function resolveProxyUrl(input: RequestInfo): RequestInfo {
+  if (typeof input !== 'string') return input;
+  for (const { match, proxy } of PROXY_PATTERNS) {
+    if (match.test(input)) return proxy(input);
+  }
+  return input;
+}
+
 export function apiUrl(path: string) {
   if (!path.startsWith("/")) {
     return `${API_BASE_URL}/${path}`;
@@ -35,6 +63,7 @@ export function apiUrl(path: string) {
  * when a 401 is received, then retries the original request once.
  */
 export async function apiFetch(input: RequestInfo, init: RequestInit = {}): Promise<Response> {
+  input = resolveProxyUrl(input);
   const token = localStorage.getItem("access_token");
 
   const headers = new Headers(init.headers || {});

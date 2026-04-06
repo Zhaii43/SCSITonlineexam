@@ -665,7 +665,7 @@ export default function DeanDashboard() {
   const handleApproveExam = async (examId: number) => {
     const token = localStorage.getItem("access_token");
     try {
-      const res = await fetch(`${API_URL}/exams/${examId}/approve/`, {
+      const res = await fetch(`/api/exams/${examId}/approve`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -685,7 +685,7 @@ export default function DeanDashboard() {
   const handleRejectExam = async (examId: number) => {
     const token = localStorage.getItem("access_token");
     try {
-      const res = await fetch(`${API_URL}/exams/${examId}/reject/`, {
+      const res = await fetch(`/api/exams/${examId}/reject`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -784,7 +784,7 @@ export default function DeanDashboard() {
     }
     const token = localStorage.getItem("access_token");
     try {
-      const res = await fetch(`${API_URL}/students/${studentId}/approve/`, {
+      const res = await fetch(`/api/students/${studentId}/approve`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -811,7 +811,7 @@ export default function DeanDashboard() {
 
     const token = localStorage.getItem("access_token");
     try {
-      const res = await fetch(`${API_URL}/students/${studentId}/reject/`, {
+      const res = await fetch(`/api/students/${studentId}/reject`, {
         method: "POST",
         headers: { 
           Authorization: `Bearer ${token}`,
