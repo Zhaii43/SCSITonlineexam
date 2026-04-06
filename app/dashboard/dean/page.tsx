@@ -1,4 +1,4 @@
-﻿// app/dashboard/dean/page.tsx
+// app/dashboard/dean/page.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -141,6 +141,7 @@ interface TodayScheduleItem {
 
 const TAB_HASH_TO_KEY = {
   "#pending-students": "pendingStudents",
+  "#rejected-students": "rejectedStudents",
   "#pending-exams": "pending",
   "#approved-exams": "approved",
   "#department-users": "users",
@@ -148,6 +149,7 @@ const TAB_HASH_TO_KEY = {
 
 const TAB_KEY_TO_HASH: Record<(typeof TAB_HASH_TO_KEY)[keyof typeof TAB_HASH_TO_KEY], keyof typeof TAB_HASH_TO_KEY> = {
   pendingStudents: "#pending-students",
+  rejectedStudents: "#rejected-students",
   pending: "#pending-exams",
   approved: "#approved-exams",
   users: "#department-users",
@@ -165,7 +167,8 @@ export default function DeanDashboard() {
   const [pendingStudents, setPendingStudents] = useState<any[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
   const [stats, setStats] = useState({ students: 0, instructors: 0, exams: 0 });
-  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "users" | "pendingStudents">("pendingStudents");
+  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "users" | "pendingStudents" | "rejectedStudents">("pendingStudents");
+  const [rejectedStudents, setRejectedStudents] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedExam, setSelectedExam] = useState<ExamDetail | null>(null);
   const [showExamModal, setShowExamModal] = useState(false);
@@ -244,6 +247,7 @@ export default function DeanDashboard() {
 
   const tabItems = [
     { key: "pendingStudents" as const, label: "Pending Students", count: pendingStudents.length },
+    { key: "rejectedStudents" as const, label: "Rejected Students", count: rejectedStudents.length },
     { key: "pending" as const, label: "Pending Exams", count: pendingExams.length },
     { key: "approved" as const, label: "Approved Exams", count: approvedExams.length },
     { key: "users" as const, label: "Department Users", count: students.length + instructors.length },
@@ -462,11 +466,12 @@ export default function DeanDashboard() {
     const token = localStorage.getItem("access_token");
     if (!token) return;
     try {
-      const [pendingExamsRes, approvedRes, usersRes, pendingStudentsRes, auditCountRes, announcementsRes] = await Promise.all([
+      const [pendingExamsRes, approvedRes, usersRes, pendingStudentsRes, rejectedStudentsRes, auditCountRes, announcementsRes] = await Promise.all([
         fetch(`${API_URL}/exams/pending/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/exams/approved/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/department/users/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/students/pending/`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/students/rejected/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/audit/count/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/notifications/announcements/mine/`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
@@ -507,6 +512,7 @@ export default function DeanDashboard() {
           }
         }
       }
+      if (rejectedStudentsRes.ok) setRejectedStudents(await rejectedStudentsRes.json());
       if (auditCountRes.ok) {
         const data = await auditCountRes.json();
         setAuditCount(data.count || 0);
@@ -1526,7 +1532,7 @@ export default function DeanDashboard() {
               </div>
 
               <div className="relative hidden md:block">
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-5 gap-2">
                   {tabItems.map((tab) => {
                     const isActive = activeTab === tab.key;
                     return (
@@ -1544,6 +1550,11 @@ export default function DeanDashboard() {
                             {tab.key === "pendingStudents" && (
                               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-1a4 4 0 00-5-4M9 20H2v-1a4 4 0 015-4m8-5a4 4 0 11-8 0 4 4 0 018 0zm6 4a4 4 0 10-4-4 4 4 0 004 4z" />
+                              </svg>
+                            )}
+                            {tab.key === "rejectedStudents" && (
+                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                               </svg>
                             )}
                             {tab.key === "pending" && (
@@ -1575,7 +1586,7 @@ export default function DeanDashboard() {
                 </div>
                 <div className="relative mt-3 h-1.5 rounded-full bg-slate-200/70">
                   <span
-                    className="absolute top-0 h-1.5 w-1/4 rounded-full bg-gradient-to-r from-blue-500 to-sky-400 transition-transform duration-300"
+                    className="absolute top-0 h-1.5 w-1/5 rounded-full bg-gradient-to-r from-blue-500 to-sky-400 transition-transform duration-300"
                     style={{ transform: `translateX(${Math.max(0, activeTabIndex) * 100}%)` }}
                   />
                 </div>
@@ -1583,6 +1594,48 @@ export default function DeanDashboard() {
             </div>
           </div>
 
+
+          {activeTab === "rejectedStudents" && (
+            <div id="rejected-students" className="space-y-4">
+              {rejectedStudents.length === 0 ? (
+                <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-12 border border-slate-200 shadow-lg shadow-slate-200/60 text-center">
+                  <div className="text-6xl mb-4">✅</div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">No Rejected Students</h3>
+                  <p className="text-slate-600">All rejected students have either appealed or none have been rejected yet.</p>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-red-200 bg-red-50/60 overflow-hidden">
+                  <div className="hidden md:grid grid-cols-[1.2fr_1.6fr_2.4fr_1fr_1fr_2fr] items-center px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-red-800 border-b border-red-200 bg-red-200/70">
+                    <span>School ID</span>
+                    <span>Name</span>
+                    <span>Email</span>
+                    <span>Year</span>
+                    <span>Contact</span>
+                    <span>Rejection Reason</span>
+                  </div>
+                  {rejectedStudents.map((student) => (
+                    <div key={student.id} className="border-b border-red-200/60 last:border-b-0 bg-white/80 px-5 py-4 hover:bg-white transition-all">
+                      <div className="hidden md:grid grid-cols-[1.2fr_1.6fr_2.4fr_1fr_1fr_2fr] items-center gap-3">
+                        <div className="text-sm font-semibold text-slate-900">{student.school_id}</div>
+                        <div className="text-sm text-slate-900">{student.first_name} {student.last_name}</div>
+                        <div className="text-sm text-slate-600 break-words">{student.email}</div>
+                        <div className="text-sm text-slate-700">{student.year_level}</div>
+                        <div className="text-sm text-slate-700">{student.contact_number || "N/A"}</div>
+                        <div className="text-sm text-red-700 font-medium">{student.rejection_reason || "—"}</div>
+                      </div>
+                      <div className="md:hidden space-y-1">
+                        <div className="flex justify-between text-sm"><span className="text-slate-500 font-medium">School ID</span><span className="font-semibold text-slate-900">{student.school_id}</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-slate-500 font-medium">Name</span><span className="text-slate-900">{student.first_name} {student.last_name}</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-slate-500 font-medium">Email</span><span className="text-slate-600 break-all">{student.email}</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-slate-500 font-medium">Year</span><span>{student.year_level}</span></div>
+                        <div className="mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700"><span className="font-semibold">Reason: </span>{student.rejection_reason || "—"}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {activeTab === "pending" && (
             <div id="pending-exams" className="space-y-4">
