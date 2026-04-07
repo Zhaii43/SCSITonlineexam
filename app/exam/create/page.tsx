@@ -350,7 +350,7 @@ export default function CreateExam() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Exam Type *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Quarter Type *</label>
                     <select
                       name="exam_type"
                       value={formData.exam_type}
@@ -362,6 +362,7 @@ export default function CreateExam() {
                       <option value="quiz">Quiz</option>
                       <option value="prelim">Prelim</option>
                       <option value="midterm">Midterm</option>
+                      <option value="semifinal">Semi-Final</option>
                       <option value="final">Final</option>
                     </select>
                   </div>
