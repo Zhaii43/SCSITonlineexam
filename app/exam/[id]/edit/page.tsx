@@ -1,11 +1,108 @@
-﻿// app/exam/[id]/edit/page.tsx\n"use client";\n\nimport { useState, useEffect } from "react";\nimport { useRouter, useParams } from "next/navigation";\nimport Link from "next/link";\nimport Header from "@/components/Header";
+// app/exam/[id]/edit/page.tsx
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import InstructorShell from "@/components/InstructorShell";
-\nimport { API_URL } from "@/lib/api";\ninterface Question {\n  id?: number;\n  question: string;\n  type: string;\n  options?: string[];\n  correct_answer: string;\n  points: number;\n  order?: number;\n}\n\ninterface MonitoringSession {\n  exam_id: number;\n  exam_title: string;\n  student_id: number;\n  student_username: string;\n  started_at: string;\n  last_heartbeat: string;\n  seconds_since_heartbeat: number;\n}\n\ninterface MonitoringTermination {\n  id: number;\n  exam_id: number;\n  student_id: number;\n  termination_count?: number;\n  description: string;\n  timestamp: string;\n}\n\ninterface MonitoringLog {\n  id: number;\n  action: string;\n  description: string;\n  exam_id?: number;\n  student_id?: number;\n  timestamp: string;\n}\n\nconst QUESTION_TYPES = [\n  { value: "multiple_choice", label: "Multiple Choice" },\n  { value: "identification", label: "Identification" },\n  { value: "enumeration", label: "Enumeration" },\n  { value: "essay", label: "Essay" },\n];\n\nexport default function EditExam() {\n  const router = useRouter();\n  const params = useParams();\n  const examId = params.id;\n  \n  const [loading, setLoading] = useState(true);\n  const [saving, setSaving] = useState(false);
+
+import { API_URL } from "@/lib/api";
+interface Question {
+  id?: number;
+  question: string;
+  type: string;
+  options?: string[];
+  correct_answer: string;
+  points: number;
+  order?: number;
+}
+
+interface MonitoringSession {
+  exam_id: number;
+  exam_title: string;
+  student_id: number;
+  student_username: string;
+  started_at: string;
+  last_heartbeat: string;
+  seconds_since_heartbeat: number;
+}
+
+interface MonitoringTermination {
+  id: number;
+  exam_id: number;
+  student_id: number;
+  termination_count?: number;
+  description: string;
+  timestamp: string;
+}
+
+interface MonitoringLog {
+  id: number;
+  action: string;
+  description: string;
+  exam_id?: number;
+  student_id?: number;
+  timestamp: string;
+}
+
+const QUESTION_TYPES = [
+  { value: "multiple_choice", label: "Multiple Choice" },
+  { value: "identification", label: "Identification" },
+  { value: "enumeration", label: "Enumeration" },
+  { value: "essay", label: "Essay" },
+];
+
+export default function EditExam() {
+  const router = useRouter();
+  const params = useParams();
+  const examId = params.id;
+  
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exam, setExam] = useState<any>(null);
   const [isReadOnly, setIsReadOnly] = useState(false);
-  const [questions, setQuestions] = useState<Question[]>([]);\n  const [selectedQuestionType, setSelectedQuestionType] = useState("multiple_choice");\n  const [currentQuestion, setCurrentQuestion] = useState<Question>({\n    question: "",\n    type: "multiple_choice",\n    options: ["", "", "", ""],\n    correct_answer: "",\n    points: 1,\n  });\n  \n  const [formData, setFormData] = useState({\n    title: "",\n    subject: "",\n    department: "",\n    exam_type: "quiz",\n    question_type: "multiple_choice",\n    scheduled_date: "",\n    scheduled_time: "",\n    duration_minutes: "",\n    total_points: "",\n    passing_score: "",\n    instructions: "",\n    preview_rules: "",\n    sample_questions_text: "",\n    year_level: "",\n    max_attempts: "1",\n    retake_policy: "none",\n    question_pool_size: "0",\n    shuffle_options: true,\n  });\n  const [monitoring, setMonitoring] = useState<{\n    active_sessions: MonitoringSession[];\n    latest_terminations: MonitoringTermination[];\n    activity_logs: MonitoringLog[];\n  }>({ active_sessions: [], latest_terminations: [], activity_logs: [] });\n  const [monitoringError, setMonitoringError] = useState<string | null>(null);\n  const [monitoringUpdatedAt, setMonitoringUpdatedAt] = useState<string | null>(null);\n\n  const departments = [
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [selectedQuestionType, setSelectedQuestionType] = useState("multiple_choice");
+  const [currentQuestion, setCurrentQuestion] = useState<Question>({
+    question: "",
+    type: "multiple_choice",
+    options: ["", "", "", ""],
+    correct_answer: "",
+    points: 1,
+  });
+  
+  const [formData, setFormData] = useState({
+    title: "",
+    subject: "",
+    department: "",
+    exam_type: "quiz",
+    question_type: "multiple_choice",
+    scheduled_date: "",
+    scheduled_time: "",
+    duration_minutes: "",
+    total_points: "",
+    passing_score: "",
+    instructions: "",
+    preview_rules: "",
+    sample_questions_text: "",
+    year_level: "",
+    max_attempts: "1",
+    retake_policy: "none",
+    question_pool_size: "0",
+    shuffle_options: true,
+  });
+  const [monitoring, setMonitoring] = useState<{
+    active_sessions: MonitoringSession[];
+    latest_terminations: MonitoringTermination[];
+    activity_logs: MonitoringLog[];
+  }>({ active_sessions: [], latest_terminations: [], activity_logs: [] });
+  const [monitoringError, setMonitoringError] = useState<string | null>(null);
+  const [monitoringUpdatedAt, setMonitoringUpdatedAt] = useState<string | null>(null);
+
+  const departments = [
     { value: "BSHM", label: "Hospitality Management" },
     { value: "BSIT", label: "Information Technology" },
     { value: "BSEE", label: "Electrical Engineering" },
@@ -16,32 +113,210 @@ import InstructorShell from "@/components/InstructorShell";
     { value: "BSChE", label: "Chemical Engineering" },
     { value: "BSME", label: "Mechanical Engineering" },
   ];
-\n  const yearLevels = [
+
+  const yearLevels = [
     { value: "1", label: "1st Year" },
     { value: "2", label: "2nd Year" },
     { value: "3", label: "3rd Year" },
     { value: "4", label: "4th Year" },
     { value: "5", label: "5th Year" },
   ];
-\n  useEffect(() => {\n    fetchExam();\n  }, [examId]);\n\n  useEffect(() => {\n    fetchMonitoring();\n    const interval = setInterval(fetchMonitoring, 5000);\n    const handleFocus = () => fetchMonitoring();\n    const handleVisibility = () => {\n      if (document.visibilityState === "visible") fetchMonitoring();\n    };\n    window.addEventListener("focus", handleFocus);\n    document.addEventListener("visibilitychange", handleVisibility);\n    return () => {\n      clearInterval(interval);\n      window.removeEventListener("focus", handleFocus);\n      document.removeEventListener("visibilitychange", handleVisibility);\n    };\n  }, [examId]);\n\n  const fetchExam = async () => {\n    const token = localStorage.getItem("access_token");
-    try {\n      const res = await fetch(`${API_URL}/exams/${examId}/detail/`, {\n        headers: { Authorization: `Bearer ${token}` },\n      });\n      \n      if (!res.ok) throw new Error("Failed to load exam");
+
+  useEffect(() => {
+    fetchExam();
+  }, [examId]);
+
+  useEffect(() => {
+    fetchMonitoring();
+    const interval = setInterval(fetchMonitoring, 5000);
+    const handleFocus = () => fetchMonitoring();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchMonitoring();
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [examId]);
+
+  const fetchExam = async () => {
+    const token = localStorage.getItem("access_token");
+    try {
+      const res = await fetch(`${API_URL}/exams/${examId}/detail/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (!res.ok) throw new Error("Failed to load exam");
       
       const data = await res.json();
       
       setIsReadOnly(Boolean(data.is_approved));
       
       setExam(data);
-      \n      const dateTime = new Date(data.scheduled_date);\n      const date = dateTime.toISOString().split('T')[0];\n      const time = dateTime.toTimeString().slice(0, 5);\n      \n      setFormData({\n        title: data.title,\n        subject: data.subject,\n        department: data.department,\n        exam_type: data.exam_type,\n        question_type: data.question_type,\n        scheduled_date: date,\n        scheduled_time: time,\n        duration_minutes: data.duration_minutes.toString(),\n        total_points: data.total_points.toString(),\n        passing_score: data.passing_score.toString(),\n        instructions: data.instructions,\n        preview_rules: data.preview_rules || "",\n        sample_questions_text: (data.sample_questions || []).join("\n"),\n        year_level: data.year_level,\n        max_attempts: String(data.max_attempts ?? 1),\n        retake_policy: data.retake_policy || "none",\n        question_pool_size: String(data.question_pool_size ?? 0),\n        shuffle_options: Boolean(data.shuffle_options ?? true),\n      });\n      \n      if (data.questions && data.questions.length > 0) {\n        setQuestions(data.questions);\n      }\n      \n      const initialType = data.question_type === "mixed" ? "multiple_choice" : data.question_type;\n      setSelectedQuestionType(initialType);\n      setCurrentQuestion(prev => ({ ...prev, type: initialType }));\n      \n      setLoading(false);\n    } catch (err: any) {\n      setError(err.message);\n      setLoading(false);\n    }\n  };\n\n  const fetchMonitoring = async () => {\n    const token = localStorage.getItem("access_token");\n    if (!token) return;\n    try {\n      const res = await fetch(`${API_URL}/exams/monitoring/`, {\n        headers: { Authorization: `Bearer ${token}` },\n      });\n      if (!res.ok) {\n        const data = await res.json().catch(() => ({}));\n        setMonitoringError(data.error || "Failed to load monitoring");\n        return;\n      }\n      const data = await res.json();\n      const idNum = parseInt(String(examId));\n      setMonitoring({\n        active_sessions: (data.active_sessions || []).filter((s: MonitoringSession) => s.exam_id === idNum),\n        latest_terminations: (data.latest_terminations || []).filter((t: MonitoringTermination) => t.exam_id === idNum),\n        activity_logs: (data.activity_logs || []).filter((l: MonitoringLog) => l.exam_id === idNum),\n      });\n      setMonitoringUpdatedAt(new Date().toLocaleTimeString());\n      setMonitoringError(null);\n    } catch {\n      setMonitoringError("Failed to load monitoring");\n    }\n  };\n\n  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {\n    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));\n  };\n\n  const addQuestion = () => {\n    if (!currentQuestion.question || !currentQuestion.correct_answer) {\n      alert("Please fill in question and correct answer");\n      return;\n    }\n\n    const totalPoints = questions.reduce((sum, q) => sum + q.points, 0) + currentQuestion.points;\n    if (totalPoints > parseInt(formData.total_points)) {\n      alert(`Total points cannot exceed ${formData.total_points}`);\n      return;\n    }\n\n    setQuestions([...questions, currentQuestion]);\n    const resetType = formData.question_type === "mixed" ? "multiple_choice" : formData.question_type;\n    setCurrentQuestion({\n      question: "",\n      type: resetType,\n      options: ["", "", "", ""],\n      correct_answer: "",\n      points: 1,\n    });\n    setSelectedQuestionType(resetType);\n  };\n\n  const removeQuestion = (index: number) => {\n    setQuestions(questions.filter((_, i) => i !== index));\n  };\n\n  const handleSubmit = async (e: React.FormEvent) => {\n    e.preventDefault();\n    \n    if (isReadOnly) return;
+      
+      const dateTime = new Date(data.scheduled_date);
+      const date = dateTime.toISOString().split('T')[0];
+      const time = dateTime.toTimeString().slice(0, 5);
+      
+      setFormData({
+        title: data.title,
+        subject: data.subject,
+        department: data.department,
+        exam_type: data.exam_type,
+        question_type: data.question_type,
+        scheduled_date: date,
+        scheduled_time: time,
+        duration_minutes: data.duration_minutes.toString(),
+        total_points: data.total_points.toString(),
+        passing_score: data.passing_score.toString(),
+        instructions: data.instructions,
+        preview_rules: data.preview_rules || "",
+        sample_questions_text: (data.sample_questions || []).join("\n"),
+        year_level: data.year_level,
+        max_attempts: String(data.max_attempts ?? 1),
+        retake_policy: data.retake_policy || "none",
+        question_pool_size: String(data.question_pool_size ?? 0),
+        shuffle_options: Boolean(data.shuffle_options ?? true),
+      });
+      
+      if (data.questions && data.questions.length > 0) {
+        setQuestions(data.questions);
+      }
+      
+      const initialType = data.question_type === "mixed" ? "multiple_choice" : data.question_type;
+      setSelectedQuestionType(initialType);
+      setCurrentQuestion(prev => ({ ...prev, type: initialType }));
+      
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  const fetchMonitoring = async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/exams/monitoring/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setMonitoringError(data.error || "Failed to load monitoring");
+        return;
+      }
+      const data = await res.json();
+      const idNum = parseInt(String(examId));
+      setMonitoring({
+        active_sessions: (data.active_sessions || []).filter((s: MonitoringSession) => s.exam_id === idNum),
+        latest_terminations: (data.latest_terminations || []).filter((t: MonitoringTermination) => t.exam_id === idNum),
+        activity_logs: (data.activity_logs || []).filter((l: MonitoringLog) => l.exam_id === idNum),
+      });
+      setMonitoringUpdatedAt(new Date().toLocaleTimeString());
+      setMonitoringError(null);
+    } catch {
+      setMonitoringError("Failed to load monitoring");
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const addQuestion = () => {
+    if (!currentQuestion.question || !currentQuestion.correct_answer) {
+      alert("Please fill in question and correct answer");
+      return;
+    }
+
+    const totalPoints = questions.reduce((sum, q) => sum + q.points, 0) + currentQuestion.points;
+    if (totalPoints > parseInt(formData.total_points)) {
+      alert(`Total points cannot exceed ${formData.total_points}`);
+      return;
+    }
+
+    setQuestions([...questions, currentQuestion]);
+    const resetType = formData.question_type === "mixed" ? "multiple_choice" : formData.question_type;
+    setCurrentQuestion({
+      question: "",
+      type: resetType,
+      options: ["", "", "", ""],
+      correct_answer: "",
+      points: 1,
+    });
+    setSelectedQuestionType(resetType);
+  };
+
+  const removeQuestion = (index: number) => {
+    setQuestions(questions.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (isReadOnly) return;
     if (questions.length === 0) {
       alert("Please add at least one question");
       return;
     }
-    \n    setSaving(true);\n    setError(null);\n\n    const token = localStorage.getItem("access_token");\n    \n    try {\n      const scheduledDateTime = `${formData.scheduled_date}T${formData.scheduled_time}:00`;\n      \n      const { sample_questions_text, ...baseData } = formData;\n      const sampleQuestions = sample_questions_text
+    
+    setSaving(true);
+    setError(null);
+
+    const token = localStorage.getItem("access_token");
+    
+    try {
+      const scheduledDateTime = `${formData.scheduled_date}T${formData.scheduled_time}:00`;
+      
+      const { sample_questions_text, ...baseData } = formData;
+      const sampleQuestions = sample_questions_text
         .split("\n")
         .map(line => line.trim())
         .filter(Boolean);
-\n      const examData = {\n        ...baseData,\n        scheduled_date: scheduledDateTime,\n        duration_minutes: parseInt(formData.duration_minutes),\n        total_points: parseInt(formData.total_points),\n        passing_score: parseInt(formData.passing_score),\n        max_attempts: parseInt(formData.max_attempts) || 1,\n        retake_policy: formData.retake_policy,\n        question_pool_size: parseInt(formData.question_pool_size) || 0,\n        shuffle_options: formData.shuffle_options,\n        sample_questions: sampleQuestions.length ? sampleQuestions : null,\n        questions: questions,\n      };\n\n      const res = await fetch(`${API_URL}/exams/${examId}/update/`, {\n        method: "PUT",
-        headers: {\n          "Content-Type": "application/json",\n          Authorization: `Bearer ${token}`,\n        },\n        body: JSON.stringify(examData),\n      });\n\n      if (!res.ok) {\n        const data = await res.json();\n        throw new Error(data.error || "Failed to update exam");\n      }\n\n      router.push("/dashboard/teacher");\n    } catch (err: any) {\n      setError(err.message);\n    } finally {\n      setSaving(false);\n    }\n  };\n\n  const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);\n\n  if (loading) {
+
+      const examData = {
+        ...baseData,
+        scheduled_date: scheduledDateTime,
+        duration_minutes: parseInt(formData.duration_minutes),
+        total_points: parseInt(formData.total_points),
+        passing_score: parseInt(formData.passing_score),
+        max_attempts: parseInt(formData.max_attempts) || 1,
+        retake_policy: formData.retake_policy,
+        question_pool_size: parseInt(formData.question_pool_size) || 0,
+        shuffle_options: formData.shuffle_options,
+        sample_questions: sampleQuestions.length ? sampleQuestions : null,
+        questions: questions,
+      };
+
+      const res = await fetch(`${API_URL}/exams/${examId}/update/`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(examData),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update exam");
+      }
+
+      router.push("/dashboard/teacher");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-sky-100 bg-[radial-gradient(circle_at_20%_10%,rgba(14,165,233,0.18),transparent_55%),radial-gradient(circle_at_80%_0%,rgba(249,115,22,0.12),transparent_45%)] flex items-center justify-center">
         <div className="relative w-full">
@@ -58,7 +333,8 @@ import InstructorShell from "@/components/InstructorShell";
       </div>
     );
   }
-\n  if (error && !exam) {
+
+  if (error && !exam) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 flex items-center justify-center">
         <div className="relative w-full">
@@ -84,14 +360,104 @@ import InstructorShell from "@/components/InstructorShell";
       </div>
     );
   }
-\n  return (\n    <div className="min-h-screen bg-sky-100">\n      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(14,165,233,0.18),transparent_55%),radial-gradient(circle_at_90%_0%,rgba(251,146,60,0.14),transparent_40%),radial-gradient(circle_at_50%_90%,rgba(16,185,129,0.12),transparent_45%)]" />\n      \n      <div className="relative">
+
+  return (
+    <div className="min-h-screen bg-sky-100">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(14,165,233,0.18),transparent_55%),radial-gradient(circle_at_90%_0%,rgba(251,146,60,0.14),transparent_40%),radial-gradient(circle_at_50%_90%,rgba(16,185,129,0.12),transparent_45%)]" />
+      
+      <div className="relative">
         <Header />
         <InstructorShell>
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12" style={{ fontFamily: "'Space Grotesk', 'Manrope', sans-serif" }}>
-          <div className="mb-8">\n            <Link href="/dashboard/teacher" className="text-sky-600 hover:text-sky-700 font-medium">\n              Back to Dashboard\n            </Link>\n            <h1 className="text-3xl font-bold text-slate-900 mt-4 mb-2">{isReadOnly ? "Exam Details" : "Edit Exam"}</h1>
+          <div className="mb-8">
+            <Link href="/dashboard/teacher" className="text-sky-600 hover:text-sky-700 font-medium">
+              Back to Dashboard
+            </Link>
+            <h1 className="text-3xl font-bold text-slate-900 mt-4 mb-2">{isReadOnly ? "Exam Details" : "Edit Exam"}</h1>
             <p className="text-slate-600">{isReadOnly ? "This exam is approved and read-only." : "Update exam details and questions"}</p>
           </div>
-\n          <div className="mb-6 rounded-3xl border border-slate-200 bg-white/90 backdrop-blur-xl p-6 shadow-lg shadow-slate-200/60">\n            <div className="flex flex-wrap items-center justify-between gap-3">\n              <div>\n                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Live Monitoring</p>\n                <h2 className="mt-2 text-xl font-semibold text-slate-900">Exam Activity</h2>\n                <p className="mt-1 text-sm text-slate-600">\n                  Auto-refreshing every 5 seconds{monitoringUpdatedAt ? ` Â· Updated ${monitoringUpdatedAt}` : ""}\n                </p>\n              </div>\n              <div className="flex gap-2">\n                <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">\n                  Active: {monitoring.active_sessions.length}\n                </span>\n                <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">\n                  Terminations: {monitoring.latest_terminations.length}\n                </span>\n              </div>\n            </div>\n\n            {monitoringError && (\n              <p className="mt-4 text-sm text-red-600">{monitoringError}</p>\n            )}\n\n            <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-5">\n              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">\n                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Active Sessions</p>\n                {monitoring.active_sessions.length === 0 ? (\n                  <p className="mt-3 text-sm text-emerald-900/70">No active sessions right now.</p>\n                ) : (\n                  <div className="mt-3 space-y-3">\n                    {monitoring.active_sessions.slice(0, 4).map((s) => (\n                      <div key={`${s.exam_id}-${s.student_id}`} className="rounded-xl bg-white/80 p-3 border border-emerald-100">\n                        <p className="text-sm font-semibold text-slate-900">{s.student_username}</p>\n                        <p className="text-[11px] text-emerald-700 mt-1">\n                          Last heartbeat {s.seconds_since_heartbeat}s ago\n                        </p>\n                      </div>\n                    ))}\n                  </div>\n                )}\n              </div>\n\n              <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-4">\n                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Latest Terminations</p>\n                {monitoring.latest_terminations.length === 0 ? (\n                  <p className="mt-3 text-sm text-amber-900/70">No recent terminations.</p>\n                ) : (\n                  <div className="mt-3 space-y-3">\n                    {monitoring.latest_terminations.slice(0, 4).map((t) => (\n                      <div key={t.id} className="rounded-xl bg-white/80 p-3 border border-amber-100">\n                        <p className="text-sm font-semibold text-slate-900">{t.description}</p>\n                        <p className="text-[11px] text-amber-700 mt-1">\n                          {new Date(t.timestamp).toLocaleString()}\n                        </p>\n                      </div>\n                    ))}\n                  </div>\n                )}\n              </div>\n\n              <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">\n                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Activity Logs</p>\n                {monitoring.activity_logs.length === 0 ? (\n                  <p className="mt-3 text-sm text-slate-600">No activity yet.</p>\n                ) : (\n                  <div className="mt-3 space-y-3">\n                    {monitoring.activity_logs.slice(0, 4).map((l) => (\n                      <div key={l.id} className="rounded-xl bg-white/80 p-3 border border-slate-200">\n                        <p className="text-sm font-semibold text-slate-900">{l.description}</p>\n                        <p className="text-[11px] text-slate-500 mt-1">\n                          {new Date(l.timestamp).toLocaleString()}\n                        </p>\n                      </div>\n                    ))}\n                  </div>\n                )}\n              </div>\n            </div>\n          </div>\n\n          {error && (
+
+          <div className="mb-6 rounded-3xl border border-slate-200 bg-white/90 backdrop-blur-xl p-6 shadow-lg shadow-slate-200/60">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Live Monitoring</p>
+                <h2 className="mt-2 text-xl font-semibold text-slate-900">Exam Activity</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Auto-refreshing every 5 seconds{monitoringUpdatedAt ? ` · Updated ${monitoringUpdatedAt}` : ""}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  Active: {monitoring.active_sessions.length}
+                </span>
+                <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                  Terminations: {monitoring.latest_terminations.length}
+                </span>
+              </div>
+            </div>
+
+            {monitoringError && (
+              <p className="mt-4 text-sm text-red-600">{monitoringError}</p>
+            )}
+
+            <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Active Sessions</p>
+                {monitoring.active_sessions.length === 0 ? (
+                  <p className="mt-3 text-sm text-emerald-900/70">No active sessions right now.</p>
+                ) : (
+                  <div className="mt-3 space-y-3">
+                    {monitoring.active_sessions.slice(0, 4).map((s) => (
+                      <div key={`${s.exam_id}-${s.student_id}`} className="rounded-xl bg-white/80 p-3 border border-emerald-100">
+                        <p className="text-sm font-semibold text-slate-900">{s.student_username}</p>
+                        <p className="text-[11px] text-emerald-700 mt-1">
+                          Last heartbeat {s.seconds_since_heartbeat}s ago
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Latest Terminations</p>
+                {monitoring.latest_terminations.length === 0 ? (
+                  <p className="mt-3 text-sm text-amber-900/70">No recent terminations.</p>
+                ) : (
+                  <div className="mt-3 space-y-3">
+                    {monitoring.latest_terminations.slice(0, 4).map((t) => (
+                      <div key={t.id} className="rounded-xl bg-white/80 p-3 border border-amber-100">
+                        <p className="text-sm font-semibold text-slate-900">{t.description}</p>
+                        <p className="text-[11px] text-amber-700 mt-1">
+                          {new Date(t.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Activity Logs</p>
+                {monitoring.activity_logs.length === 0 ? (
+                  <p className="mt-3 text-sm text-slate-600">No activity yet.</p>
+                ) : (
+                  <div className="mt-3 space-y-3">
+                    {monitoring.activity_logs.slice(0, 4).map((l) => (
+                      <div key={l.id} className="rounded-xl bg-white/80 p-3 border border-slate-200">
+                        <p className="text-sm font-semibold text-slate-900">{l.description}</p>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          {new Date(l.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
               {error}
             </div>
@@ -103,7 +469,177 @@ import InstructorShell from "@/components/InstructorShell";
               <h3 className="text-lg font-semibold text-slate-900 mb-4">Exam Information</h3>
               
               <div className="space-y-4">
-                <div>\n                  <label className="block text-sm font-medium text-slate-900 mb-2">Exam Title *</label>\n                  <input\n                    name="title"\n                    type="text"\n                    value={formData.title}\n                    onChange={handleChange}\n                    required\n                    className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"\n                  />\n                </div>\n\n                <div className="grid grid-cols-2 gap-4">\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Subject *</label>\n                    <input\n                      name="subject"\n                      type="text"\n                      value={formData.subject}\n                      onChange={handleChange}\n                      required\n                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"\n                    />\n                  </div>\n\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Exam Type *</label>\n                    <select\n                      name="exam_type"\n                      value={formData.exam_type}\n                      onChange={handleChange}\n                      required\n                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"\n                    >\n                      <option value="quiz">Quiz</option>\n                      <option value="prelim">Prelim</option>\n                      <option value="midterm">Midterm</option>\n                      <option value="final">Final</option>\n                    </select>\n                  </div>\n                </div>\n\n                <div>\n                  <label className="block text-sm font-medium text-slate-900 mb-2">Question Type *</label>\n                  <select\n                    name="question_type"\n                    value={formData.question_type}\n                    onChange={handleChange}\n                    required\n                    className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"\n                  >\n                    <option value="multiple_choice">Multiple Choice</option>\n                    <option value="identification">Identification</option>\n                    <option value="enumeration">Enumeration</option>\n                    <option value="essay">Essay</option>\n                    <option value="mixed">Mixed (Multiple Types)</option>\n                  </select>\n                </div>\n\n                <div className="grid grid-cols-2 gap-4">\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Department *</label>\n                    <select\n                      name="department"\n                      value={formData.department}\n                      onChange={handleChange}\n                      required\n                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"\n                    >\n                      {departments.map(dept => (\n                        <option key={dept.value} value={dept.value}>{dept.label}</option>\n                      ))}\n                    </select>\n                  </div>\n\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Year Level *</label>\n                    <select\n                      name="year_level"\n                      value={formData.year_level}\n                      onChange={handleChange}\n                      required\n                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"\n                    >\n                      {yearLevels.map(year => (\n                        <option key={year.value} value={year.value}>{year.label}</option>\n                      ))}\n                    </select>\n                  </div>\n                </div>\n\n                <div className="grid grid-cols-2 gap-4">\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Date *</label>\n                    <input\n                      name="scheduled_date"\n                      type="date"\n                      value={formData.scheduled_date}\n                      onChange={handleChange}\n                      required\n                      min={new Date().toISOString().split('T')[0]}\n                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"\n                    />\n                  </div>\n\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Time *</label>\n                    <input\n                      name="scheduled_time"\n                      type="time"\n                      value={formData.scheduled_time}\n                      onChange={handleChange}\n                      required\n                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"\n                    />\n                  </div>\n                </div>\n\n                <div className="grid grid-cols-3 gap-4">\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Duration (min) *</label>\n                    <input\n                      name="duration_minutes"\n                      type="number"\n                      value={formData.duration_minutes}\n                      onChange={handleChange}\n                      required\n                      min="1"\n                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"\n                    />\n                  </div>\n\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Total Points *</label>\n                    <input\n                      name="total_points"\n                      type="number"\n                      value={formData.total_points}\n                      onChange={handleChange}\n                      required\n                      min="1"\n                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"\n                    />\n                  </div>\n\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Passing Score *</label>\n                    <input\n                      name="passing_score"\n                      type="number"\n                      value={formData.passing_score}\n                      onChange={handleChange}\n                      required\n                      min="1"\n                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"\n                    />\n                  </div>\n                </div>\n\n                <div>\n                  <label className="block text-sm font-medium text-slate-900 mb-2">Instructions</label>\n                  <textarea\n                    name="instructions"\n                    value={formData.instructions}\n                    onChange={handleChange}\n                    rows={3}\n                    className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"\n                  />\n                </div>\n\n                <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-2">Exam Title *</label>
+                  <input
+                    name="title"
+                    type="text"
+                    value={formData.title}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Subject *</label>
+                    <input
+                      name="subject"
+                      type="text"
+                      value={formData.subject}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Exam Type *</label>
+                    <select
+                      name="exam_type"
+                      value={formData.exam_type}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"
+                    >
+                      <option value="quiz">Quiz</option>
+                      <option value="prelim">Prelim</option>
+                      <option value="midterm">Midterm</option>
+                      <option value="final">Final</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-2">Question Type *</label>
+                  <select
+                    name="question_type"
+                    value={formData.question_type}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"
+                  >
+                    <option value="multiple_choice">Multiple Choice</option>
+                    <option value="identification">Identification</option>
+                    <option value="enumeration">Enumeration</option>
+                    <option value="essay">Essay</option>
+                    <option value="mixed">Mixed (Multiple Types)</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Department *</label>
+                    <select
+                      name="department"
+                      value={formData.department}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"
+                    >
+                      {departments.map(dept => (
+                        <option key={dept.value} value={dept.value}>{dept.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Year Level *</label>
+                    <select
+                      name="year_level"
+                      value={formData.year_level}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"
+                    >
+                      {yearLevels.map(year => (
+                        <option key={year.value} value={year.value}>{year.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Date *</label>
+                    <input
+                      name="scheduled_date"
+                      type="date"
+                      value={formData.scheduled_date}
+                      onChange={handleChange}
+                      required
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Time *</label>
+                    <input
+                      name="scheduled_time"
+                      type="time"
+                      value={formData.scheduled_time}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Duration (min) *</label>
+                    <input
+                      name="duration_minutes"
+                      type="number"
+                      value={formData.duration_minutes}
+                      onChange={handleChange}
+                      required
+                      min="1"
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Total Points *</label>
+                    <input
+                      name="total_points"
+                      type="number"
+                      value={formData.total_points}
+                      onChange={handleChange}
+                      required
+                      min="1"
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Passing Score *</label>
+                    <input
+                      name="passing_score"
+                      type="number"
+                      value={formData.passing_score}
+                      onChange={handleChange}
+                      required
+                      min="1"
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-2">Instructions</label>
+                  <textarea
+                    name="instructions"
+                    value={formData.instructions}
+                    onChange={handleChange}
+                    rows={3}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"
+                  />
+                </div>
+
+                <div className="space-y-3">
                   <h4 className="text-md font-semibold text-slate-900 border-b border-slate-200 pb-2">Shuffle</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
@@ -123,12 +659,153 @@ import InstructorShell from "@/components/InstructorShell";
                     </div>
                   </div>
                 </div>
-\n                <div className="space-y-3">\n                  <h4 className="text-md font-semibold text-slate-900 border-b border-slate-200 pb-2">Exam Preview</h4>\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Rules & Requirements (Preview)</label>\n                    <textarea\n                      name="preview_rules"\n                      value={formData.preview_rules}\n                      onChange={handleChange}\n                      rows={3}\n                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"\n                      placeholder="e.g., No calculators, webcam must stay on, do not leave fullscreen..."\n                    />\n                  </div>\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Sample Questions (Optional)</label>\n                    <textarea\n                      name="sample_questions_text"\n                      value={formData.sample_questions_text}\n                      onChange={handleChange}\n                      rows={4}\n                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"\n                      placeholder="Add one sample question per line..."\n                    />\n                    <p className="text-xs text-slate-500 mt-2">These will appear in the student exam preview.</p>\n                  </div>\n                </div>
+
+                <div className="space-y-3">
+                  <h4 className="text-md font-semibold text-slate-900 border-b border-slate-200 pb-2">Exam Preview</h4>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Rules & Requirements (Preview)</label>
+                    <textarea
+                      name="preview_rules"
+                      value={formData.preview_rules}
+                      onChange={handleChange}
+                      rows={3}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"
+                      placeholder="e.g., No calculators, webcam must stay on, do not leave fullscreen..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Sample Questions (Optional)</label>
+                    <textarea
+                      name="sample_questions_text"
+                      value={formData.sample_questions_text}
+                      onChange={handleChange}
+                      rows={4}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200"
+                      placeholder="Add one sample question per line..."
+                    />
+                    <p className="text-xs text-slate-500 mt-2">These will appear in the student exam preview.</p>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-slate-200 p-6">
-              <div className="flex justify-between items-center mb-4">\n                <h3 className="text-lg font-semibold text-slate-900">Questions</h3>\n                <div className="text-sm text-slate-600">\n                  Points: <span className="font-bold text-sky-600">{totalPoints} / {formData.total_points}</span>\n                </div>\n              </div>\n\n              <div className="space-y-4 mb-6">\n                {formData.question_type === "mixed" && (\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Question Type *</label>\n                    <select\n                      value={selectedQuestionType}\n                      onChange={(e) => {\n                        const newType = e.target.value;\n                        setSelectedQuestionType(newType);\n                        setCurrentQuestion({\n                          ...currentQuestion,\n                          type: newType,\n                          options: newType === "multiple_choice" ? ["", "", "", ""] : undefined,\n                        });\n                      }}\n                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-slate-200 text-slate-900"\n                    >\n                      {QUESTION_TYPES.map(type => (\n                        <option key={type.value} value={type.value}>{type.label}</option>\n                      ))}\n                    </select>\n                  </div>\n                )}\n\n                <div>\n                  <label className="block text-sm font-medium text-slate-900 mb-2">Question *</label>\n                  <textarea\n                    value={currentQuestion.question}\n                    onChange={(e) => setCurrentQuestion({...currentQuestion, question: e.target.value})}\n                    rows={3}\n                    className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-slate-200 text-slate-900"\n                    placeholder="Enter your question..."\n                  />\n                </div>\n\n                {(formData.question_type === "multiple_choice" || (formData.question_type === "mixed" && selectedQuestionType === "multiple_choice")) && (\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Options *</label>\n                    {currentQuestion.options?.map((opt, i) => (\n                      <input\n                        key={i}\n                        value={opt}\n                        onChange={(e) => {\n                          const newOpts = [...(currentQuestion.options || [])];\n                          newOpts[i] = e.target.value;\n                          setCurrentQuestion({...currentQuestion, options: newOpts});\n                        }}\n                        className="w-full px-4 py-3 border border-sky-200 rounded-xl bg-white/80 mb-2 focus:ring-2 focus:ring-sky-500 text-slate-900"\n                        placeholder={`Option ${i + 1}`}\n                      />\n                    ))}\n                  </div>\n                )}\n\n                <div className="grid grid-cols-2 gap-4">\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Correct Answer *</label>\n                    <input\n                      value={currentQuestion.correct_answer}\n                      onChange={(e) => setCurrentQuestion({...currentQuestion, correct_answer: e.target.value})}\n                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-slate-200 text-slate-900"\n                      placeholder="Enter correct answer"\n                    />\n                  </div>\n\n                  <div>\n                    <label className="block text-sm font-medium text-slate-900 mb-2">Points *</label>\n                    <input\n                      type="number"\n                      value={currentQuestion.points}\n                      onChange={(e) => setCurrentQuestion({...currentQuestion, points: parseInt(e.target.value)})}\n                      min="1"\n                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-slate-200 text-slate-900"\n                    />\n                  </div>\n                </div>\n\n                <button\n                  type="button"\n                  onClick={addQuestion}\n                  className="w-full bg-slate-900 text-white py-3 rounded-xl hover:bg-slate-800 transition-all font-semibold shadow-lg shadow-slate-900/20"\n                >\n                  + Add Question\n                </button>\n              </div>\n\n              {questions.length > 0 && (\n                <div className="space-y-3">\n                  <h4 className="font-semibold text-slate-900">Questions ({questions.length})</h4>\n                  {questions.map((q, i) => (\n                    <div key={i} className="bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-200 p-4">\n                      <div className="flex justify-between items-start">\n                        <div className="flex-1">\n                          <p className="font-semibold text-slate-900">{i + 1}. {q.question}</p>\n                          <p className="text-sm text-slate-600 mt-1">Type: {QUESTION_TYPES.find(t => t.value === q.type)?.label || q.type}</p>\n                          <p className="text-sm text-slate-600 mt-1">Answer: {q.correct_answer}</p>\n                          <p className="text-sm text-sky-600 mt-1">{q.points} points</p>\n                        </div>\n                        <button\n                          type="button"\n                          onClick={() => removeQuestion(i)}\n                          className="text-red-600 hover:text-red-700 font-medium"\n                        >\n                          Remove\n                        </button>\n                      </div>\n                    </div>\n                  ))}\n                </div>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">Questions</h3>
+                <div className="text-sm text-slate-600">
+                  Points: <span className="font-bold text-sky-600">{totalPoints} / {formData.total_points}</span>
+                </div>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                {formData.question_type === "mixed" && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Question Type *</label>
+                    <select
+                      value={selectedQuestionType}
+                      onChange={(e) => {
+                        const newType = e.target.value;
+                        setSelectedQuestionType(newType);
+                        setCurrentQuestion({
+                          ...currentQuestion,
+                          type: newType,
+                          options: newType === "multiple_choice" ? ["", "", "", ""] : undefined,
+                        });
+                      }}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-slate-200 text-slate-900"
+                    >
+                      {QUESTION_TYPES.map(type => (
+                        <option key={type.value} value={type.value}>{type.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-2">Question *</label>
+                  <textarea
+                    value={currentQuestion.question}
+                    onChange={(e) => setCurrentQuestion({...currentQuestion, question: e.target.value})}
+                    rows={3}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-slate-200 text-slate-900"
+                    placeholder="Enter your question..."
+                  />
+                </div>
+
+                {(formData.question_type === "multiple_choice" || (formData.question_type === "mixed" && selectedQuestionType === "multiple_choice")) && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Options *</label>
+                    {currentQuestion.options?.map((opt, i) => (
+                      <input
+                        key={i}
+                        value={opt}
+                        onChange={(e) => {
+                          const newOpts = [...(currentQuestion.options || [])];
+                          newOpts[i] = e.target.value;
+                          setCurrentQuestion({...currentQuestion, options: newOpts});
+                        }}
+                        className="w-full px-4 py-3 border border-sky-200 rounded-xl bg-white/80 mb-2 focus:ring-2 focus:ring-sky-500 text-slate-900"
+                        placeholder={`Option ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Correct Answer *</label>
+                    <input
+                      value={currentQuestion.correct_answer}
+                      onChange={(e) => setCurrentQuestion({...currentQuestion, correct_answer: e.target.value})}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-slate-200 text-slate-900"
+                      placeholder="Enter correct answer"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">Points *</label>
+                    <input
+                      type="number"
+                      value={currentQuestion.points}
+                      onChange={(e) => setCurrentQuestion({...currentQuestion, points: parseInt(e.target.value)})}
+                      min="1"
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-slate-200 text-slate-900"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={addQuestion}
+                  className="w-full bg-slate-900 text-white py-3 rounded-xl hover:bg-slate-800 transition-all font-semibold shadow-lg shadow-slate-900/20"
+                >
+                  + Add Question
+                </button>
+              </div>
+
+              {questions.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-slate-900">Questions ({questions.length})</h4>
+                  {questions.map((q, i) => (
+                    <div key={i} className="bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-200 p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <p className="font-semibold text-slate-900">{i + 1}. {q.question}</p>
+                          <p className="text-sm text-slate-600 mt-1">Type: {QUESTION_TYPES.find(t => t.value === q.type)?.label || q.type}</p>
+                          <p className="text-sm text-slate-600 mt-1">Answer: {q.correct_answer}</p>
+                          <p className="text-sm text-sky-600 mt-1">{q.points} points</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeQuestion(i)}
+                          className="text-red-600 hover:text-red-700 font-medium"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
             </fieldset>
@@ -156,3 +833,4 @@ import InstructorShell from "@/components/InstructorShell";
     </div>
   );
 }
+
