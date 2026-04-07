@@ -18,6 +18,8 @@ export default function CreateExam() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [examId, setExamId] = useState<number | null>(null);
+  const [hasQuestions, setHasQuestions] = useState(false);
+  const [originalDepartment, setOriginalDepartment] = useState("");
   
   const [formData, setFormData] = useState({
     title: "",
@@ -100,6 +102,8 @@ export default function CreateExam() {
           : [];
 
         setExamId(data.id);
+        setOriginalDepartment(data.department || "");
+        setHasQuestions((data.question_count ?? 0) > 0);
         setFormData({
           title: data.title || "",
           subject: data.subject || "",
@@ -169,6 +173,13 @@ export default function CreateExam() {
     }
 
     try {
+      // Block department change when editing and questions already exist
+      if (editingExamId && hasQuestions && role !== "dean" && formData.department !== originalDepartment) {
+        setError("Cannot change department after questions have been added. Remove all questions first or keep the original department.");
+        setLoading(false);
+        return;
+      }
+
       const scheduledDateTime = `${formData.scheduled_date}T${formData.scheduled_time}:00`;
       
       let expirationDateTime = null;
@@ -257,9 +268,11 @@ export default function CreateExam() {
           <p className="text-slate-600 mb-6">
             {isDean ? "Your exam is already approved. Now add questions to publish it to students." : "Now add questions to your exam."}
           </p>
-          <Link href={`/exam/questions/${examId}`} className="inline-block bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-all font-semibold shadow-lg shadow-slate-900/20">
-            Add Questions
-          </Link>
+          <div className="flex flex-col gap-3">
+            <Link href={`/exam/questions/${examId}`} className="inline-block bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-all font-semibold shadow-lg shadow-slate-900/20">
+              Add / Edit Questions
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -408,13 +421,19 @@ export default function CreateExam() {
                       value={formData.department}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200 transition-all"
+                      disabled={editingExamId !== null && hasQuestions && role !== "dean"}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value="">Select Department</option>
                       {departments.map(dept => (
                         <option key={dept.value} value={dept.value}>{dept.label}</option>
                       ))}
                     </select>
+                    {editingExamId !== null && hasQuestions && role !== "dean" && (
+                      <p className="mt-1.5 text-xs text-amber-700 font-medium">
+                        ⚠️ Department is locked — questions already exist for this exam. Remove all questions first to change the department.
+                      </p>
+                    )}
                   </div>
 
                   <div>
