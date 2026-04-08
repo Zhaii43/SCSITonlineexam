@@ -1057,7 +1057,7 @@ export default function DeanDashboard() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'student_import_template.csv';
+        a.download = 'masterlist_import_template.csv';
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -2061,7 +2061,7 @@ export default function DeanDashboard() {
                   onClick={() => setShowImportModal(true)}
                   className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg hover:shadow-xl hover:shadow-purple-500/30 transition-all font-medium"
                 >
-                   Import Students from CSV
+                   Import Masterlist CSV
                 </button>
               </div>
 
@@ -3071,12 +3071,12 @@ export default function DeanDashboard() {
           </div>
         )}
 
-        {/* Import Students Modal */}
+        {/* Import Masterlist Modal */}
         {showImportModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white/95 backdrop-blur-xl rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 shadow-2xl shadow-slate-900/10">
               <div className="sticky top-0 bg-white/95 backdrop-blur-xl border-b border-slate-200 p-6 flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-slate-900">Import Students from CSV</h2>
+                <h2 className="text-2xl font-bold text-slate-900">Import Masterlist CSV</h2>
                 <button
                   onClick={() => {
                     setShowImportModal(false);
@@ -3094,11 +3094,11 @@ export default function DeanDashboard() {
                 <div className="bg-slate-50 rounded-xl p-4">
                   <h3 className="font-bold text-slate-900 mb-2">Instructions</h3>
                   <ol className="text-sm text-slate-700 space-y-1 list-decimal list-inside">
-                    <li>Download the CSV template below</li>
-                    <li>Fill in the student information</li>
-                    <li>Upload the completed CSV file</li>
+                    <li>Download the masterlist template below</li>
+                    <li>Fill in the official student records from EDP</li>
+                    <li>Upload the completed CSV file for dean approval review</li>
                   </ol>
-                  <p className="text-xs text-slate-500 mt-2">Required columns: username, email, first_name, last_name, school_id, year_level, contact_number, password</p>
+                  <p className="text-xs text-slate-500 mt-2">Required columns: school_id, email, first_name, last_name, year_level, course, subjects</p>
                 </div>
 
                 {/* File Upload */}
@@ -3131,7 +3131,7 @@ export default function DeanDashboard() {
                       Importing...
                     </span>
                   ) : (
-                    'Import Students'
+                    'Import Masterlist'
                   )}
                 </button>
 
@@ -3148,7 +3148,7 @@ export default function DeanDashboard() {
                         <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                           <h4 className="font-bold text-green-900 mb-2">Import Summary</h4>
                           <div className="text-sm text-green-700 space-y-1">
-                            <p><span className="font-semibold">Successfully imported:</span> {importResult.success_count} students</p>
+                            <p><span className="font-semibold">Successfully imported:</span> {importResult.success_count} student accounts</p>
                             <p><span className="font-semibold">Errors:</span> {importResult.error_count}</p>
                           </div>
                         </div>
@@ -3164,9 +3164,9 @@ export default function DeanDashboard() {
                                   </p>
                                   {error.data && (
                                     <div className="text-xs text-slate-600 mt-2">
-                                      <p><span className="font-medium">Username:</span> {error.data.username}</p>
+                                      <p><span className="font-medium">Student ID:</span> {error.data.school_id}</p>
                                       <p><span className="font-medium">Email:</span> {error.data.email}</p>
-                                      <p><span className="font-medium">School ID:</span> {error.data.school_id}</p>
+                                      <p><span className="font-medium">Course:</span> {error.data.course}</p>
                                     </div>
                                   )}
                                 </div>

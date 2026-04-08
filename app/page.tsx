@@ -154,15 +154,9 @@ export default function Home() {
 
               <div className="mt-5 flex flex-wrap gap-3">
                 {mounted && !isLoggedIn ? (
-                  <>
-                    <Link href="/register" className="group inline-flex items-center gap-2 bg-slate-900 text-white font-semibold px-6 py-2.5 rounded-full shadow-lg shadow-slate-900/15 transition-all hover:-translate-y-0.5 text-sm">
-                      Get Started Free
-                      
-                    </Link>
-                    <Link href="/login" className="inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-6 py-2.5 rounded-full hover:border-slate-400 transition-all hover:-translate-y-0.5 text-sm">
-                      Sign In
-                    </Link>
-                  </>
+                  <Link href="/login" className="inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-6 py-2.5 rounded-full hover:border-slate-400 transition-all hover:-translate-y-0.5 text-sm">
+                    Sign In
+                  </Link>
                 ) : mounted ? (
                   <Link href={getDashboardUrl()} className="group inline-flex items-center gap-2 bg-slate-900 text-white font-semibold px-6 py-2.5 rounded-full shadow-lg shadow-slate-900/15 transition-all hover:-translate-y-0.5 text-sm">
                     Go to Dashboard
@@ -408,9 +402,6 @@ export default function Home() {
               </p>
               {mounted && !isLoggedIn && (
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <Link href="/register" className="inline-flex items-center gap-2 bg-slate-900 text-white font-semibold px-6 py-2.5 rounded-full hover:-translate-y-0.5 transition-all shadow-lg shadow-slate-900/15 text-sm">
-                    Create Free Account
-                  </Link>
                   <Link href="/login" className="inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-6 py-2.5 rounded-full hover:border-slate-400 transition-all hover:-translate-y-0.5 text-sm">
                     Sign In
                   </Link>

@@ -87,14 +87,13 @@ const roles = [
     subtitle: "Take exams and view results",
     sections: [
       {
-        title: "How to Register",
+        title: "How Student Access Works",
         steps: [
-          "Click 'Register' on the login page",
-          "Verify your email with the OTP sent to your inbox",
-          "Fill in your personal information and school ID",
-          "Upload your study load document",
-          "Wait for your department dean to approve your account",
-          "If rejected, update your details and resubmit from the rejection page",
+          "Student accounts are created from the official EDP masterlist, not by self-registration",
+          "Wait for your department dean to approve your imported account",
+          "After approval, check your email for the password setup link",
+          "Set your password, then log in using your Student ID and new password",
+          "If you are missing from the system, contact your dean or EDP office to verify your masterlist entry",
         ],
       },
       {
@@ -187,9 +186,9 @@ const roles = [
         title: "Approving Students",
         steps: [
           "Go to the 'Pending Students' tab on your dashboard",
-          "Review each student's information and study load document",
+          "Review each imported masterlist account and confirm the Student ID, course, and subject load",
           "Approve individually or use bulk approve for multiple students",
-          "Rejected students will be notified via email",
+          "Approved students receive an email to set their password and log in with their Student ID",
         ],
       },
       {
@@ -233,7 +232,7 @@ const faqs = [
   },
   {
     q: "Account not approved yet?",
-    a: "Wait for your department dean to review and approve your account. If it has been more than 2 business days, contact your dean directly.",
+    a: "Wait for your department dean to approve your masterlist-based account. Once approved, you should receive an email to set your password. If it has been more than 2 business days, contact your dean or EDP office directly.",
   },
   {
     q: "Exam terminated unfairly?",

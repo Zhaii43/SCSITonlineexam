@@ -199,7 +199,7 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
         {/* Glass effect background */}
         <div className="absolute inset-0 bg-white/75 backdrop-blur-xl rounded-2xl border border-slate-200 shadow-xl shadow-slate-900/10" />
         
-        <div className="relative flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
+        <div className="relative flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4 md:grid md:grid-cols-[auto_1fr_auto] md:items-center">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3">
             <div className="relative h-10 w-10">
@@ -220,7 +220,7 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center justify-self-center gap-8">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -233,7 +233,7 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
           </nav>
 
           {/* Auth buttons / User menu - desktop */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center justify-self-end gap-3">
             {!mounted ? (
               <div className="h-10 w-56 rounded-xl bg-slate-100 border border-slate-200" />
             ) : isLoggedIn ? (
@@ -241,7 +241,7 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
                 <NotificationBell />
                 <Link
                   href={getDashboardLink()}
-                  className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+                  className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-900"
                 >
                   Dashboard
                 </Link>
@@ -249,7 +249,7 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
                 <div className="relative">
                   <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all"
+                    className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition-all hover:-translate-y-0.5 hover:bg-slate-800"
                   >
                     <User size={16} />
                     <span>{userName}</span>
@@ -284,20 +284,12 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
                 </div>
               </>
             ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
-                >
-                  Log in
-                </Link>
-                <Link
-                  href="/register"
-                  className="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all"
-                >
-                  Get Started
-                </Link>
-              </>
+              <Link
+                href="/login"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-900"
+              >
+                Log in
+              </Link>
             )}
           </div>
 
@@ -368,22 +360,13 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
                 </button>
               </>
             ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="block py-3 text-center text-sm font-medium text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
-                  onClick={() => setIsMobileOpen(false)}
-                >
-                  Log in
-                </Link>
-                <Link
-                  href="/register"
-                  className="block py-3 text-center text-sm font-semibold bg-slate-900 text-white rounded-xl shadow-lg hover:bg-slate-800 transition-all"
-                  onClick={() => setIsMobileOpen(false)}
-                >
-                  Get Started
-                </Link>
-              </>
+              <Link
+                href="/login"
+                className="block py-3 px-4 text-center text-sm font-semibold text-slate-700 border border-slate-200 rounded-xl bg-white shadow-sm hover:bg-slate-50 transition-colors"
+                onClick={() => setIsMobileOpen(false)}
+              >
+                Log in
+              </Link>
             )}
           </div>
         </div>

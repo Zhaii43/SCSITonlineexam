@@ -146,8 +146,8 @@ const features = [
   {
     icon: "key" as IconName,
     title: "OTP Verification",
-    desc: "Two-factor authentication via email OTP ensures only verified users access exams, with daily verification for students.",
-    highlights: ["Email OTP on login", "Daily student verification", "Pre-registration OTP", "Secure token handling"],
+    desc: "Secure email-based credential flows help approved users activate access and recover passwords safely.",
+    highlights: ["Password setup email", "Password reset OTP", "Secure token handling", "Approved-user access only"],
   },
   {
     icon: "check" as IconName,
@@ -261,8 +261,8 @@ export default function Features() {
                   Join the SCSIT examination portal and experience all these features today.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <Link href="/register" className="inline-flex items-center gap-2 bg-slate-900 text-white font-semibold px-6 py-2.5 rounded-full hover:-translate-y-0.5 transition-all shadow-lg shadow-slate-900/15 text-sm">
-                    Create Free Account
+                  <Link href="/login" className="inline-flex items-center gap-2 bg-slate-900 text-white font-semibold px-6 py-2.5 rounded-full hover:-translate-y-0.5 transition-all shadow-lg shadow-slate-900/15 text-sm">
+                    Open Login
                   </Link>
                   <Link href="/contact" className="inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-6 py-2.5 rounded-full hover:border-slate-400 transition-all text-sm">
                     Contact Sales

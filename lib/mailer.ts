@@ -409,19 +409,19 @@ export async function sendResultsPublishedEmail(to: string, firstName: string, r
 }
 
 export async function sendBulkImportEmail(to: string, firstName: string, setPasswordToken: string, frontendUrl: string) {
-  const setPasswordLink = `${frontendUrl}/set-password?token=${setPasswordToken}`;
+  const setPasswordLink = `${frontendUrl}/reset-password?token=${setPasswordToken}`;
   await sendMail(
     to,
-    "Your Student Account Has Been Created - SCSIT Online Exam",
-    `Hello ${firstName},\n\nA SCSIT Online Exam student account has been created for you.\n\nSet your password here: ${setPasswordLink}\n\nThis link expires in 48 hours.`,
+    "Your Student Account Has Been Approved - SCSIT Online Exam",
+    `Hello ${firstName},\n\nYour SCSIT Online Exam account has been approved.\n\nSet your password here: ${setPasswordLink}\n\nAfter that, log in using your Student ID and new password.`,
     layout(
-      "Account Created",
+      "Account Approved",
       `
-      <h2 style="margin:0 0 8px;">Your Student Account Is Ready</h2>
+      <h2 style="margin:0 0 8px;">Your Student Account Is Approved</h2>
       <p>Hello <strong>${firstName}</strong>,</p>
-      <p>A SCSIT Online Exam student account has been created for you. Click the button below to set your password and activate your account.</p>
+      <p>Your SCSIT Online Exam account has been approved. Click the button below to set your password and activate your access.</p>
       <p style="margin-top:24px;">${btn(setPasswordLink, "Set My Password")}</p>
-      <p style="font-size:13px;color:#64748b;margin-top:16px;">This link expires in <strong>48 hours</strong>. If you did not expect this email, please contact your department administrator.</p>
+      <p style="font-size:13px;color:#64748b;margin-top:16px;">After setting your password, log in using your <strong>Student ID</strong> and new password.</p>
     `,
     ),
   );

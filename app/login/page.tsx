@@ -150,7 +150,7 @@ export default function Login() {
                 <div className="mb-5 rounded-xl bg-red-50 border border-red-200 px-4 py-3">
                   <p className="text-red-700 font-semibold text-sm">Account Not Found</p>
                   <p className="text-red-600 text-sm mt-0.5">{error.message}</p>
-                  <a href="/register" className="text-red-700 text-sm font-semibold underline mt-1 inline-block">Create an account</a>
+                  <a href="/help" className="text-red-700 text-sm font-semibold underline mt-1 inline-block">View student access guide</a>
                 </div>
               )}
               {error?.code === "wrong_password" && (
@@ -187,12 +187,12 @@ export default function Login() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="username" className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Username or Email
+                    Student ID, Username, or Email
                   </label>
                   <input
                     id="username" name="username" type="text"
                     value={formData.username} onChange={handleChange} required
-                    placeholder="Enter your username or email"
+                    placeholder="Enter your Student ID, username, or email"
                     className="w-full px-4 py-3 rounded-xl bg-white/80 border border-sky-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all text-sm"
                   />
                 </div>
@@ -248,13 +248,6 @@ export default function Login() {
                   ) : "Sign in"}
                 </button>
               </form>
-
-              <p className="mt-5 text-center text-sm text-slate-600">
-                Don&apos;t have an account?{" "}
-                <Link href="/register" className="text-sky-600 hover:text-sky-700 font-semibold transition-colors">
-                  Create one here
-                </Link>
-              </p>
 
               <p className="mt-4 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5">
                 <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
