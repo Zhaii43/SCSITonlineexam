@@ -39,6 +39,28 @@ interface Exam {
  is_approved: boolean;
 }
 
+interface EligibleStudent {
+ id: number;
+ username: string;
+ email: string;
+ first_name: string;
+ last_name: string;
+ school_id: string;
+ year_level: string;
+ course?: string;
+ contact_number?: string;
+}
+
+interface EligibleStudentsExamDetail {
+ id: number;
+ title: string;
+ subject: string;
+ department: string;
+ year_level: string;
+ total_eligible_students: number;
+ eligible_students: EligibleStudent[];
+}
+
 interface MonitoringSession {
  exam_id: number;
  exam_title: string;
@@ -95,6 +117,10 @@ export default function InstructorDashboard() {
  const [extendLoading, setExtendLoading] = useState(false);
  const [extendError, setExtendError] = useState<string | null>(null);
  const [extendSuccess, setExtendSuccess] = useState<string | null>(null);
+ const [showEligibleStudentsModal, setShowEligibleStudentsModal] = useState(false);
+ const [eligibleStudentsExam, setEligibleStudentsExam] = useState<EligibleStudentsExamDetail | null>(null);
+ const [eligibleStudentsLoading, setEligibleStudentsLoading] = useState(false);
+ const [eligibleStudentsError, setEligibleStudentsError] = useState<string | null>(null);
  const [showScrollTop, setShowScrollTop] = useState(false);
  const [announcementsCount, setAnnouncementsCount] = useState(0);
  const [draftExams, setDraftExams] = useState<any[]>([]);
@@ -387,6 +413,43 @@ export default function InstructorDashboard() {
   setExtendError(null);
   setExtendSuccess(null);
   setShowExtendModal(true);
+ };
+
+ const handleViewEligibleStudents = async (examId: number) => {
+  const token = localStorage.getItem("access_token");
+  if (!token) return;
+
+  setShowEligibleStudentsModal(true);
+  setEligibleStudentsLoading(true);
+  setEligibleStudentsError(null);
+
+  try {
+   const res = await fetch(`${API_URL}/exams/${examId}/detail/`, {
+    headers: { Authorization: `Bearer ${token}` },
+   });
+
+   const data = await res.json().catch(() => ({}));
+   if (!res.ok) {
+    setEligibleStudentsExam(null);
+    setEligibleStudentsError(data.error || "Failed to load eligible students.");
+    return;
+   }
+
+   setEligibleStudentsExam({
+    id: data.id,
+    title: data.title,
+    subject: data.subject,
+    department: data.department,
+    year_level: data.year_level,
+    total_eligible_students: data.total_eligible_students ?? 0,
+    eligible_students: Array.isArray(data.eligible_students) ? data.eligible_students : [],
+   });
+  } catch {
+   setEligibleStudentsExam(null);
+   setEligibleStudentsError("Failed to load eligible students.");
+  } finally {
+   setEligibleStudentsLoading(false);
+  }
  };
 
  const handleExtendTime = async (bulk: boolean) => {
@@ -1272,6 +1335,9 @@ export default function InstructorDashboard() {
              <Link href={`/exam/${exam.id}/edit`} className={btnPrimary}>
               Edit
              </Link>
+             <button onClick={() => handleViewEligibleStudents(exam.id)} className={btnOutline}>
+              Eligible Students
+             </button>
             </div>
            </div>
           ))}
@@ -1339,6 +1405,9 @@ export default function InstructorDashboard() {
             <Link href={`/exam/${exam.id}/edit`} className={btnPrimary}>
              View Details
             </Link>
+            <button onClick={() => handleViewEligibleStudents(exam.id)} className={btnOutline}>
+             Eligible Students
+            </button>
             <Link href={`/exam/${exam.id}/analytics`} className={btnAccent}>
              Analytics
             </Link>
@@ -1450,6 +1519,88 @@ export default function InstructorDashboard() {
         >
          Close
         </button>
+       </div>
+     </div>
+    </div>
+   )}
+
+    {showEligibleStudentsModal && (
+     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden shadow-2xl">
+       <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+        <div>
+         <h2 className="text-xl font-bold text-slate-900">Eligible Students</h2>
+         {eligibleStudentsExam && (
+          <div className="mt-1 text-sm text-slate-600">
+           <span className="font-semibold text-slate-800">{eligibleStudentsExam.title}</span>
+           <span className="mx-2 text-slate-300">|</span>
+           <span>{eligibleStudentsExam.subject}</span>
+           <span className="mx-2 text-slate-300">|</span>
+           <span>{eligibleStudentsExam.department}</span>
+           <span className="mx-2 text-slate-300">|</span>
+           <span>Year {eligibleStudentsExam.year_level}</span>
+         </div>
+         )}
+        </div>
+        <button
+         onClick={() => {
+          setShowEligibleStudentsModal(false);
+          setEligibleStudentsExam(null);
+          setEligibleStudentsError(null);
+         }}
+         className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+        >
+         x
+        </button>
+       </div>
+
+       <div className="px-6 py-5 overflow-y-auto max-h-[calc(85vh-96px)]">
+        {eligibleStudentsLoading ? (
+         <div className="py-16 text-center text-slate-500">Loading eligible students...</div>
+        ) : eligibleStudentsError ? (
+         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {eligibleStudentsError}
+         </div>
+        ) : eligibleStudentsExam ? (
+         <div className="space-y-4">
+          <div className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+           {eligibleStudentsExam.total_eligible_students} student{eligibleStudentsExam.total_eligible_students !== 1 ? "s" : ""} matched by department, year level, and enrolled subjects.
+          </div>
+
+          {eligibleStudentsExam.eligible_students.length === 0 ? (
+           <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-slate-600">
+            No eligible students found for this exam.
+           </div>
+          ) : (
+           <div className="rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="hidden md:grid grid-cols-[1.6fr_1fr_1fr_1.2fr] gap-4 bg-slate-50 px-4 py-3 text-[11px] uppercase tracking-[0.2em] text-slate-500">
+             <div>Student</div>
+             <div>Student ID</div>
+             <div>Year / Course</div>
+             <div>Contact</div>
+            </div>
+            <div className="divide-y divide-slate-200">
+             {eligibleStudentsExam.eligible_students.map((student) => (
+              <div key={student.id} className="grid grid-cols-1 md:grid-cols-[1.6fr_1fr_1fr_1.2fr] gap-4 px-4 py-4 items-start">
+               <div>
+                <p className="font-semibold text-slate-900">
+                 {[student.first_name, student.last_name].filter(Boolean).join(" ") || student.username}
+                </p>
+                <p className="text-sm text-slate-500 mt-1">{student.email || "No email"}</p>
+               </div>
+               <div className="text-sm text-slate-700">{student.school_id || "-"}</div>
+               <div className="text-sm text-slate-700">
+                <p>Year {student.year_level || "-"}</p>
+                <p className="text-slate-500 mt-1">{student.course || "Course not set"}</p>
+               </div>
+               <div className="text-sm text-slate-700">{student.contact_number || "-"}</div>
+              </div>
+             ))}
+            </div>
+           </div>
+          )}
+         </div>
+        ) : null}
        </div>
       </div>
      </div>
