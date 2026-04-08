@@ -2545,6 +2545,10 @@ export default function DeanDashboard() {
                     <span className="ml-auto text-xs bg-sky-200 text-sky-900 px-2 py-0.5 rounded-full font-semibold">System</span>
                   </div>
                   <div className="space-y-3">
+                    {(() => {
+                      const subjects = selectedStudent.enrolled_subjects || [];
+                      return (
+                        <>
                     <div className={`rounded-xl p-3 text-sm font-semibold text-center ${safeToApprove ? 'bg-sky-100 text-sky-900 border border-sky-200' : 'bg-amber-100 text-amber-900 border border-amber-200'}`}>
                       {safeToApprove ? 'Ready to approve' : 'Review required before approval'}
                     </div>
@@ -2553,7 +2557,7 @@ export default function DeanDashboard() {
                         ['Account Source', selectedStudent.account_source === 'masterlist_import' ? 'CSV Masterlist Import' : 'Manual Verification'],
                         ['School ID Login', selectedStudent.school_id || '-'],
                         ['Course', selectedStudent.course || '-'],
-                        ['Subjects', (selectedStudent.enrolled_subjects || []).length > 0 ? selectedStudent.enrolled_subjects.join(', ') : '-'],
+                        ['Subjects', subjects.length > 0 ? subjects.join(', ') : '-'],
                       ] as [string, string][]).map(([label, value]) => (
                         <div key={label} className="flex justify-between gap-4">
                           <span className="text-slate-600 font-medium">{label}</span>
@@ -2566,6 +2570,9 @@ export default function DeanDashboard() {
                         This student came directly from the imported CSV, so dean approval can happen here without checking a separate enrollment-record table.
                       </div>
                     )}
+                        </>
+                      );
+                    })()}
                   </div>
                   {activeTab === "pendingStudents" && !selectedStudent.is_approved && (
                     <div className="pt-2 flex gap-3">
