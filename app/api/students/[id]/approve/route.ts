@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendBulkImportEmail, sendStudentApprovalEmail } from "@/lib/mailer";
+import { sendMasterlistApprovedEmail, sendStudentApprovalEmail } from "@/lib/mailer";
 import { getServerBackendUrl } from "@/lib/server-backend-url";
 
 export const runtime = "nodejs";
@@ -21,11 +21,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (data.student_email) {
     try {
-      if (data.student_reset_token) {
-        await sendBulkImportEmail(
+      if (data.student_account_source === "masterlist_import") {
+        await sendMasterlistApprovedEmail(
           data.student_email,
           data.student_first_name ?? "there",
-          data.student_reset_token,
+          data.student_username ?? data.student_school_id,
+          data.student_school_id,
           FRONTEND_URL,
         );
       } else {

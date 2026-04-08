@@ -9,6 +9,7 @@ import {
   sendExamScheduledEmail,
   sendIssueReportEmail,
   sendIssueReportReplyEmail,
+  sendMasterlistApprovedEmail,
   sendPasswordResetEmail,
   sendResultsPublishedEmail,
   sendStaffApprovalEmail,
@@ -131,6 +132,16 @@ export async function POST(request: Request) {
 
       case "results_published":
         await sendResultsPublishedEmail(data.to, data.firstName, data.result, data.frontendUrl);
+        break;
+
+      case "masterlist_approval":
+        await sendMasterlistApprovedEmail(
+          data.to,
+          data.firstName,
+          data.username,
+          data.schoolId,
+          data.frontendUrl,
+        );
         break;
 
       case "bulk_import":

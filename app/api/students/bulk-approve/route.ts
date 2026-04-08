@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendBulkImportEmail, sendStudentApprovalEmail } from "@/lib/mailer";
+import { sendMasterlistApprovedEmail, sendStudentApprovalEmail } from "@/lib/mailer";
 import { getServerBackendUrl } from "@/lib/server-backend-url";
 
 export const runtime = "nodejs";
@@ -40,11 +40,12 @@ export async function POST(request: NextRequest) {
       approvedStudents
         .filter((student) => !!student.email)
         .map((student) => {
-          if (student.reset_token) {
-            return sendBulkImportEmail(
+          if (student.account_source === "masterlist_import") {
+            return sendMasterlistApprovedEmail(
               student.email!,
               student.first_name ?? "there",
-              student.reset_token,
+              student.username ?? student.school_id ?? "",
+              student.school_id ?? "",
               FRONTEND_URL,
             );
           }

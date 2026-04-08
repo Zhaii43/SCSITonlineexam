@@ -427,6 +427,37 @@ export async function sendBulkImportEmail(to: string, firstName: string, setPass
   );
 }
 
+export async function sendMasterlistApprovedEmail(
+  to: string,
+  firstName: string,
+  username: string,
+  schoolId: string,
+  frontendUrl: string,
+) {
+  const loginLink = `${frontendUrl}/login`;
+  await sendMail(
+    to,
+    "Your Student Account Has Been Approved - SCSIT Online Exam",
+    `Hello ${firstName},\n\nYour SCSIT Online Exam account has been approved.\n\nUsername: ${username}\nTemporary Password: ${schoolId}\n\nYou will be required to change your password on first login.\n\nLogin: ${loginLink}`,
+    layout(
+      "Account Approved",
+      `
+      <h2 style="margin:0 0 8px;">Your Student Account Is Approved</h2>
+      <p>Hello <strong>${firstName}</strong>,</p>
+      <p>Your SCSIT Online Exam account has been approved. Use the credentials below to log in.</p>
+      <table cellpadding="0" cellspacing="0" style="margin:20px 0;width:100%;">
+        ${detailRow("Username", username)}
+        ${detailRow("Temporary Password", schoolId)}
+      </table>
+      <div style="background:#fef9c3;border-left:4px solid #eab308;padding:12px 16px;border-radius:4px;margin:0 0 20px;font-size:14px;color:#713f12;">
+        ⚠️ You will be required to <strong>change your password</strong> immediately after your first login.
+      </div>
+      <p style="margin-top:24px;">${btn(loginLink, "Log In Now")}</p>
+    `,
+    ),
+  );
+}
+
 export async function sendAnnouncementEmail(
   to: string,
   recipient: { firstName: string; fullName?: string },
