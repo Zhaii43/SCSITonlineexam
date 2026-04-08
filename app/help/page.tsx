@@ -91,8 +91,8 @@ const roles = [
         steps: [
           "Student accounts are created from the official EDP masterlist, not by self-registration",
           "Wait for your department dean to approve your imported account",
-          "After approval, log in using your Student ID as your initial password",
-          "Open your profile settings and change your password after your first login",
+          "After approval, check your email and open the reset-password link",
+          "Set your password, then log in using your Student ID and new password",
           "If you are missing from the system, contact your dean or EDP office to verify your masterlist entry",
         ],
       },
@@ -188,7 +188,7 @@ const roles = [
           "Go to the 'Pending Students' tab on your dashboard",
           "Review each imported masterlist account and confirm the Student ID, course, and subject load",
           "Approve individually or use bulk approve for multiple students",
-          "Approved students can log in using their Student ID as the initial password",
+          "Approved students receive an email with a reset-password link before their first login",
         ],
       },
       {
@@ -232,7 +232,7 @@ const faqs = [
   },
   {
     q: "Account not approved yet?",
-    a: "Wait for your department dean to approve your masterlist-based account. Once approved, log in using your Student ID as your initial password, then change it from your profile settings. If it has been more than 2 business days, contact your dean or EDP office directly.",
+    a: "Wait for your department dean to approve your masterlist-based account. Once approved, check your email for the reset-password link, set your password, then log in using your Student ID and that password. If it has been more than 2 business days, contact your dean or EDP office directly.",
   },
   {
     q: "Exam terminated unfairly?",

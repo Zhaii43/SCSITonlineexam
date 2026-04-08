@@ -2567,7 +2567,7 @@ export default function DeanDashboard() {
                     </div>
                     {selectedStudent.account_source === "masterlist_import" && (
                       <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                        This student came directly from the imported CSV, so dean approval can happen here without checking a separate enrollment-record table. After approval, the student can log in using the Student ID as the initial password.
+                        This student came directly from the imported CSV, so dean approval can happen here without checking a separate enrollment-record table. After approval, the student receives a reset-password email link to set a password before logging in.
                       </div>
                     )}
                         </>
@@ -3006,7 +3006,7 @@ export default function DeanDashboard() {
                     <li>Download the masterlist template below</li>
                     <li>Fill in the official student records from EDP</li>
                     <li>Upload the completed CSV file for dean approval review</li>
-                    <li>After approval, students log in using their Student ID as their initial password</li>
+                    <li>After approval, students receive an email with a reset-password link to set their own password</li>
                   </ol>
                   <p className="text-xs text-slate-500 mt-2">Required columns: school_id, email, first_name, last_name, year_level, course, subjects</p>
                 </div>
