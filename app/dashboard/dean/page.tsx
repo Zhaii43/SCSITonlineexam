@@ -187,10 +187,6 @@ export default function DeanDashboard() {
   const [examPhotoStats, setExamPhotoStats] = useState<{ total_photos: number; total_images: number; total_text: number } | null>(null);
   const [selectedPhotoExam, setSelectedPhotoExam] = useState<number | null>(null);
   const [enrolledRecords, setEnrolledRecords] = useState<Record<string, any>>({});
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importLoading, setImportLoading] = useState(false);
-  const [importResult, setImportResult] = useState<any>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [studentToReject, setStudentToReject] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -1045,66 +1041,6 @@ export default function DeanDashboard() {
     }
   };
 
-  const handleDownloadTemplate = async () => {
-    const token = localStorage.getItem("access_token");
-    try {
-      const res = await fetch(`${API_URL}/students/template/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'masterlist_import_template.csv';
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }
-    } catch (err) {
-      console.error("Failed to download template");
-      toast.error("Failed to download template");
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setImportFile(e.target.files[0]);
-      setImportResult(null);
-    }
-  };
-
-  const handleImportStudents = async () => {
-    if (!importFile) return;
-
-    setImportLoading(true);
-    const token = localStorage.getItem("access_token");
-    const formData = new FormData();
-    formData.append('file', importFile);
-
-    try {
-      const res = await fetch(`${API_URL}/students/bulk-import/`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-
-      const data = await res.json();
-      setImportResult(data);
-      
-      if (res.ok && data.success_count > 0) {
-        checkAuthAndFetchData();
-      }
-    } catch (err) {
-      setImportResult({ error: "Failed to import students" });
-      toast.error("Failed to import students");
-    } finally {
-      setImportLoading(false);
-    }
-  };
-
   const hasPhotoViolation = examPhotos.some((p) => p.capture_type === "violation" || p.violation_reason);
   const imagePhotos = examPhotos.filter((p) => !p.is_text_only && p.photo_url);
   let imageCount = 0;
@@ -1298,7 +1234,7 @@ export default function DeanDashboard() {
             >
               <div className="pointer-events-none absolute -right-12 -top-10 h-32 w-32 rounded-full bg-sky-200/50 blur-2xl transition-all group-hover:scale-110" />
               <div className="relative flex items-center justify-between">
-                <p className="text-slate-600 text-sm font-semibold uppercase tracking-wide">Enrollment Records</p>
+                <p className="text-slate-600 text-sm font-semibold uppercase tracking-wide">Masterlist</p>
                 <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-sky-100 text-sky-700 ring-1 ring-sky-200/80">
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-1a4 4 0 00-5-4M9 20H2v-1a4 4 0 015-4m8-5a4 4 0 11-8 0 4 4 0 018 0zm6 4a4 4 0 10-4-4 4 4 0 004 4z" />
@@ -1306,9 +1242,9 @@ export default function DeanDashboard() {
                 </span>
               </div>
               <p className="relative mt-4 text-3xl font-bold text-slate-900">Manage</p>
-              <p className="relative text-xs text-slate-500">Official student records</p>
+              <p className="relative text-xs text-slate-500">Official student masterlist</p>
               <div className="relative mt-5 inline-flex items-center gap-2 rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white shadow-lg shadow-sky-600/30 transition-all group-hover:-translate-y-0.5">
-                Open Records
+                Open Masterlist
                 <span className="text-sm">-&gt;</span>
               </div>
             </Link>
@@ -2043,26 +1979,21 @@ export default function DeanDashboard() {
 
           {activeTab === "pendingStudents" && (
             <div id="pending-students" className="space-y-4">
-              {/* Bulk Import Section */}
               <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-6 border border-slate-200 shadow-lg shadow-slate-200/60">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900">Bulk Student Import</h3>
-                    <p className="text-sm text-slate-600">Import multiple students at once using a ZIP or RAR file (CSV + photos)</p>
+                    <h3 className="text-lg font-bold text-slate-900">Masterlist Management</h3>
+                    <p className="text-sm text-slate-600">
+                      Student accounts now come from the approved masterlist. Add records, import the CSV, and sync accounts from one place.
+                    </p>
                   </div>
-                  <button
-                    onClick={handleDownloadTemplate}
-                    className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-all font-medium text-sm"
+                  <Link
+                    href="/dashboard/dean/enrollment-records"
+                    className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-slate-800 shadow-lg shadow-slate-900/20"
                   >
-                     Download Template
-                  </button>
+                    Open Masterlist
+                  </Link>
                 </div>
-                <button
-                  onClick={() => setShowImportModal(true)}
-                  className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg hover:shadow-xl hover:shadow-purple-500/30 transition-all font-medium"
-                >
-                   Import Masterlist CSV
-                </button>
               </div>
 
               {pendingStudents.length === 0 ? (
@@ -2608,11 +2539,11 @@ export default function DeanDashboard() {
                     </div>
                   )}
                 </div>
-                {/* RIGHT - Official Enrollment Record */}
+                {/* RIGHT - Official Masterlist Record */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-6 rounded-full bg-sky-500"></div>
-                    <h3 className="font-bold text-slate-900">Enrollment Records Reference</h3>
+                    <h3 className="font-bold text-slate-900">Masterlist Reference</h3>
                     <span className="ml-auto text-xs bg-sky-200 text-sky-900 px-2 py-0.5 rounded-full font-semibold">System</span>
                   </div>
                   {enrolledLoading ? (
@@ -2621,7 +2552,7 @@ export default function DeanDashboard() {
                     </div>
                   ) : !enrolledRecord?.found ? (
                     <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-                      <p className="font-bold text-red-700 mb-1">No Enrollment Record Found</p>
+                      <p className="font-bold text-red-700 mb-1">No Masterlist Record Found</p>
                       <p className="text-sm text-red-600">School ID <span className="font-mono font-bold">{selectedStudent.school_id}</span> does not match any officially enrolled student in the system.</p>
                       <p className="text-xs text-red-600/80 mt-2">This student should be rejected.</p>
                     </div>
@@ -3066,131 +2997,6 @@ export default function DeanDashboard() {
                 >
                   Close
                 </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Import Masterlist Modal */}
-        {showImportModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white/95 backdrop-blur-xl rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 shadow-2xl shadow-slate-900/10">
-              <div className="sticky top-0 bg-white/95 backdrop-blur-xl border-b border-slate-200 p-6 flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-slate-900">Import Masterlist CSV</h2>
-                <button
-                  onClick={() => {
-                    setShowImportModal(false);
-                    setImportFile(null);
-                    setImportResult(null);
-                  }}
-                  className="text-slate-400 hover:text-slate-600 text-2xl"
-                >
-                  x
-                </button>
-              </div>
-              
-              <div className="p-6 space-y-6">
-                {/* Instructions */}
-                <div className="bg-slate-50 rounded-xl p-4">
-                  <h3 className="font-bold text-slate-900 mb-2">Instructions</h3>
-                  <ol className="text-sm text-slate-700 space-y-1 list-decimal list-inside">
-                    <li>Download the masterlist template below</li>
-                    <li>Fill in the official student records from EDP</li>
-                    <li>Upload the completed CSV file for dean approval review</li>
-                  </ol>
-                  <p className="text-xs text-slate-500 mt-2">Required columns: school_id, email, first_name, last_name, year_level, course, subjects</p>
-                </div>
-
-                {/* File Upload */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Select CSV File
-                  </label>
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={handleFileChange}
-                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
-                  />
-                  {importFile && (
-                    <p className="mt-2 text-sm text-slate-600">
-                      Selected: <span className="font-semibold">{importFile.name}</span>
-                    </p>
-                  )}
-                </div>
-
-                {/* Import Button */}
-                <button
-                  onClick={handleImportStudents}
-                  disabled={!importFile || importLoading}
-                  className="w-full px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-slate-900/20"
-                >
-                  {importLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      Importing...
-                    </span>
-                  ) : (
-                    'Import Masterlist'
-                  )}
-                </button>
-
-                {/* Results */}
-                {importResult && (
-                  <div className="space-y-4">
-                    {importResult.error ? (
-                      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                        <h4 className="font-bold text-red-900 mb-2">Import Failed</h4>
-                        <p className="text-sm text-red-700">{importResult.error}</p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                          <h4 className="font-bold text-green-900 mb-2">Import Summary</h4>
-                          <div className="text-sm text-green-700 space-y-1">
-                            <p><span className="font-semibold">Successfully imported:</span> {importResult.success_count} student accounts</p>
-                            <p><span className="font-semibold">Errors:</span> {importResult.error_count}</p>
-                          </div>
-                        </div>
-
-                        {importResult.errors && importResult.errors.length > 0 && (
-                          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                            <h4 className="font-bold text-yellow-900 mb-3">Errors Found ({importResult.errors.length})</h4>
-                            <div className="max-h-64 overflow-y-auto space-y-3">
-                              {importResult.errors.map((error: any, index: number) => (
-                                <div key={index} className="bg-white rounded-lg p-3 border border-yellow-200">
-                                  <p className="text-sm font-semibold text-yellow-900 mb-1">
-                                    Row {error.row}: {error.error}
-                                  </p>
-                                  {error.data && (
-                                    <div className="text-xs text-slate-600 mt-2">
-                                      <p><span className="font-medium">Student ID:</span> {error.data.school_id}</p>
-                                      <p><span className="font-medium">Email:</span> {error.data.email}</p>
-                                      <p><span className="font-medium">Course:</span> {error.data.course}</p>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {importResult.success_count > 0 && (
-                          <button
-                            onClick={() => {
-                              setShowImportModal(false);
-                              setImportFile(null);
-                              setImportResult(null);
-                            }}
-                            className="w-full px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-medium"
-                          >
-                            Done
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </div>
