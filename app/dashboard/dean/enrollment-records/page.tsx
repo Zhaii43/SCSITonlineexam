@@ -343,6 +343,9 @@ export default function MasterlistPage() {
       if (res.ok && (data.success_count ?? 0) > 0) {
         await refreshMasterlistData(token, search);
         showToast("success", `${data.success_count} masterlist records imported`);
+        setCsvFile(null);
+        setImportResult(null);
+        setShowImportModal(false);
       }
     } finally {
       setImportLoading(false);
