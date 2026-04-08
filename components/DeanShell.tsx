@@ -126,10 +126,6 @@ export default function DeanShell({ children }: { children: React.ReactNode }) {
                   <span className="h-2 w-2 rounded-full bg-sky-400" />
                   Create Exam
                 </Link>
-                <Link href="/dashboard/dean/enrollment-records" onClick={() => setSidebarMobilePath(null)} className={itemClass("/dashboard/dean/enrollment-records")}>
-                  <span className="h-2 w-2 rounded-full bg-sky-400" />
-                  Enrollment Records
-                </Link>
                 <Link href="/dashboard/dean/exam-stats" onClick={() => setSidebarMobilePath(null)} className={itemClass("/dashboard/dean/exam-stats")}>
                   <span className="h-2 w-2 rounded-full bg-sky-400" />
                   Exam Statistics
@@ -203,10 +199,6 @@ export default function DeanShell({ children }: { children: React.ReactNode }) {
                 <span className="h-2 w-2 rounded-full bg-sky-400" />
                 Create Exam
               </Link>
-              <Link href="/dashboard/dean/enrollment-records" className={itemClass("/dashboard/dean/enrollment-records")}>
-                <span className="h-2 w-2 rounded-full bg-sky-400" />
-                Enrollment Records
-              </Link>
               <Link href="/dashboard/dean/exam-stats" className={itemClass("/dashboard/dean/exam-stats")}>
                 <span className="h-2 w-2 rounded-full bg-sky-400" />
                 Exam Statistics
@@ -243,7 +235,7 @@ export default function DeanShell({ children }: { children: React.ReactNode }) {
 
             <div className="mt-4 rounded-xl border border-sky-800/60 bg-sky-800 px-3 py-3">
               <p className="text-[11px] uppercase tracking-[0.3em] text-sky-200/70">Quick Tip</p>
-              <p className="mt-2 text-xs text-sky-100/80">Use enrollment records together with pending student review to keep approvals accurate.</p>
+              <p className="mt-2 text-xs text-sky-100/80">Import the official CSV first, then review and approve pending student accounts from the dean dashboard.</p>
             </div>
           </div>
         </div>

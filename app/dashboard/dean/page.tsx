@@ -46,6 +46,9 @@ interface Student {
   last_name: string;
   school_id: string;
   year_level: string;
+  course?: string;
+  enrolled_subjects?: string[];
+  account_source?: string;
   contact_number: string;
   profile_picture: string | null;
   id_photo: string | null;
@@ -186,7 +189,10 @@ export default function DeanDashboard() {
   const [examPhotos, setExamPhotos] = useState<any[]>([]);
   const [examPhotoStats, setExamPhotoStats] = useState<{ total_photos: number; total_images: number; total_text: number } | null>(null);
   const [selectedPhotoExam, setSelectedPhotoExam] = useState<number | null>(null);
-  const [enrolledRecords, setEnrolledRecords] = useState<Record<string, any>>({});
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResult, setImportResult] = useState<any>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [studentToReject, setStudentToReject] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -195,8 +201,6 @@ export default function DeanDashboard() {
   const [announcementsCount, setAnnouncementsCount] = useState(0);
   const [draftExams, setDraftExams] = useState<any[]>([]);
   const [discardingDraft, setDiscardingDraft] = useState<number | null>(null);
-  const [enrolledRecord, setEnrolledRecord] = useState<any>(null);
-  const [enrolledLoading, setEnrolledLoading] = useState(false);
   const [editingSchoolId, setEditingSchoolId] = useState(false);
   const [schoolIdDraft, setSchoolIdDraft] = useState('');
   const [schoolIdSaving, setSchoolIdSaving] = useState(false);
@@ -291,19 +295,6 @@ export default function DeanDashboard() {
     (studentPage - 1) * usersPageSize,
     studentPage * usersPageSize
   );
-
-  const fetchEnrolledRecords = (studentList: any[]) => {
-    const token = localStorage.getItem("access_token");
-    if (!token) return;
-    studentList.forEach((s: any) => {
-      fetch(`${API_URL}/students/${s.id}/enrolled-record/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(r => r.json())
-        .then(rec => setEnrolledRecords(prev => ({ ...prev, [String(s.id)]: rec })))
-        .catch(() => {});
-    });
-  };
 
   useEffect(() => {
     checkAuthAndFetchData();
@@ -413,11 +404,6 @@ export default function DeanDashboard() {
     if (studentPage > studentPageCount) setStudentPage(studentPageCount);
   }, [studentPage, studentPageCount]);
 
-  // Auto-fetch enrolled records whenever pending students list changes
-  useEffect(() => {
-    if (pendingStudents.length > 0) fetchEnrolledRecords(pendingStudents);
-  }, [pendingStudents]);
-
   useEffect(() => {
     setStudyLoadPreviewFailed(false);
   }, [selectedStudent?.study_load]);
@@ -453,13 +439,6 @@ export default function DeanDashboard() {
     window.open(targetUrl, "_blank", "noopener,noreferrer");
   };
 
-  // Poll enrolled records every 10s for real-time match updates
-  useEffect(() => {
-    if (pendingStudents.length === 0) return;
-    const interval = setInterval(() => fetchEnrolledRecords(pendingStudents), 10000);
-    return () => clearInterval(interval);
-  }, [pendingStudents]);
-
   const fetchLiveData = async () => {
     const token = localStorage.getItem("access_token");
     if (!token) return;
@@ -492,22 +471,7 @@ export default function DeanDashboard() {
 
           if (!refreshedSelectedStudent) {
             setShowStudentModal(false);
-            setEnrolledRecord(null);
             setEditingSchoolId(false);
-          } else {
-            try {
-              const selectedRecordRes = await fetch(`${API_URL}/students/${refreshedSelectedStudent.id}/enrolled-record/`, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              if (selectedRecordRes.ok) {
-                const selectedRecordData = await selectedRecordRes.json();
-                setEnrolledRecord(selectedRecordData);
-                setEnrolledRecords((prev) => ({
-                  ...prev,
-                  [String(refreshedSelectedStudent.id)]: selectedRecordData,
-                }));
-              }
-            } catch {}
           }
         }
       }
@@ -708,19 +672,9 @@ export default function DeanDashboard() {
     }
   };
 
-  const hasEnrollmentMatch = (student: any) => {
-    const rec = enrolledRecords[String(student.id)];
-    if (!rec || !rec.found || !rec.record) return false;
-    const r = rec.record;
-    const norm = (v: any) => String(v ?? '').toLowerCase().trim().replace(/\s+/g, ' ');
-    const nameMatch = norm(`${student.first_name} ${student.last_name}`) === norm(`${r.first_name} ${r.last_name}`);
-    const idMatch = norm(student.school_id) === norm(r.school_id);
-    const yearMatch = norm(student.year_level).replace(/[^0-9]/g, '') === norm(r.year_level).replace(/[^0-9]/g, '');
-    return nameMatch && idMatch && yearMatch;
-  };
-
   const canApproveStudent = (student: any) => {
-    if (!hasEnrollmentMatch(student)) return false;
+    if (student.account_source === "masterlist_import") return true;
+    if (!student.id_photo) return false;
     if (!student.id_verified) return false;
     if ((student.is_transferee || student.is_irregular) && !student.declaration_verified) return false;
     return true;
@@ -785,7 +739,7 @@ export default function DeanDashboard() {
   const handleApproveStudent = async (studentId: number) => {
     const student = pendingStudents.find(s => s.id === studentId);
     if (!student || !canApproveStudent(student)) {
-      toast.error("Cannot approve: enrollment record, ID photo verification, or declaration requirements are not complete.");
+      toast.error("Cannot approve: required verification steps are not complete.");
       return;
     }
     const token = localStorage.getItem("access_token");
@@ -860,7 +814,7 @@ export default function DeanDashboard() {
 
     if (invalid.length > 0) {
       const names = invalid.map(s => `${s.first_name} ${s.last_name}`).join(", ");
-      toast.error(`Cannot bulk approve. Enrollment record, ID photo verification, or declaration requirements are incomplete for: ${names}`);
+      toast.error(`Cannot bulk approve. Required verification steps are incomplete for: ${names}`);
       return;
     }
     
@@ -958,23 +912,9 @@ export default function DeanDashboard() {
 
   const handleViewStudentDetails = async (student: Student) => {
     setSelectedStudent(student);
-    setEnrolledRecord(null);
     setShowStudentModal(true);
-    setEnrolledLoading(true);
     setEditingSchoolId(false);
-    setSchoolIdDraft('');
-    const token = localStorage.getItem("access_token");
-    try {
-      const res = await fetch(`${API_URL}/students/${student.id}/enrolled-record/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setEnrolledRecord(data);
-        setEnrolledRecords(prev => ({ ...prev, [String(student.id)]: data }));
-      }
-    } catch {}
-    finally { setEnrolledLoading(false); }
+    setSchoolIdDraft(student.school_id || "");
   };
 
   const handleSaveSchoolId = async () => {
@@ -993,17 +933,6 @@ export default function DeanDashboard() {
         setSelectedStudent(updated as Student);
         setPendingStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, school_id: data.school_id } : s));
         setEditingSchoolId(false);
-        // Re-fetch enrolled record with new school_id
-        setEnrolledLoading(true);
-        const recRes = await fetch(`${API_URL}/students/${selectedStudent.id}/enrolled-record/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (recRes.ok) {
-          const recData = await recRes.json();
-          setEnrolledRecord(recData);
-          setEnrolledRecords(prev => ({ ...prev, [String(selectedStudent.id)]: recData }));
-        }
-        setEnrolledLoading(false);
       } else {
         toast.error(data.error || "Failed to update School ID");
       }
@@ -1038,6 +967,70 @@ export default function DeanDashboard() {
     } catch (err) {
       console.error("Failed to fetch exam photos");
       toast.error("Failed to fetch exam photos");
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    const token = localStorage.getItem("access_token");
+    try {
+      const res = await fetch(`${API_URL}/students/template/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "masterlist_import_template.csv";
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch {
+      console.error("Failed to download template");
+      toast.error("Failed to download template");
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setImportFile(e.target.files[0]);
+      setImportResult(null);
+    }
+  };
+
+  const handleImportStudents = async () => {
+    if (!importFile) return;
+
+    setImportLoading(true);
+    const token = localStorage.getItem("access_token");
+    const formData = new FormData();
+    formData.append("file", importFile);
+
+    try {
+      const res = await fetch(`${API_URL}/students/bulk-import/`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      const data = await res.json();
+      setImportResult(data);
+
+      if (res.ok && data.success_count > 0) {
+        checkAuthAndFetchData();
+        setShowImportModal(false);
+        setImportFile(null);
+        setImportResult(null);
+        toast.success(`${data.success_count} student accounts imported`);
+      }
+    } catch {
+      setImportResult({ error: "Failed to import students" });
+      toast.error("Failed to import students");
+    } finally {
+      setImportLoading(false);
     }
   };
 
@@ -1083,17 +1076,7 @@ export default function DeanDashboard() {
       toast.error("Failed to update extra approval.");
     }
   };
-  const safeToApprove = (() => {
-    if (!selectedStudent || !enrolledRecord?.found || !enrolledRecord.record) return false;
-    if (!selectedStudent.id_verified) return false;
-    const r = enrolledRecord.record;
-    const checks = {
-      name: `${selectedStudent.first_name} ${selectedStudent.last_name}`.toLowerCase() === `${r.first_name} ${r.last_name}`.toLowerCase(),
-      school_id: selectedStudent.school_id === r.school_id,
-      year_level: selectedStudent.year_level === r.year_level,
-    };
-    return Object.values(checks).every(Boolean);
-  })();
+  const safeToApprove = selectedStudent ? canApproveStudent(selectedStudent) : false;
 
   if (loading) {
     return (
@@ -1229,12 +1212,12 @@ export default function DeanDashboard() {
               </div>
             </Link>
             <Link
-              href="/dashboard/dean/enrollment-records"
+              href="/dashboard/dean#pending-students"
               className="group relative overflow-hidden rounded-2xl border border-sky-200/70 bg-gradient-to-br from-white via-white to-sky-50 p-6 shadow-[0_10px_30px_-18px_rgba(2,132,199,0.35)] transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-18px_rgba(2,132,199,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
             >
               <div className="pointer-events-none absolute -right-12 -top-10 h-32 w-32 rounded-full bg-sky-200/50 blur-2xl transition-all group-hover:scale-110" />
               <div className="relative flex items-center justify-between">
-                <p className="text-slate-600 text-sm font-semibold uppercase tracking-wide">Masterlist</p>
+                <p className="text-slate-600 text-sm font-semibold uppercase tracking-wide">Pending Students</p>
                 <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-sky-100 text-sky-700 ring-1 ring-sky-200/80">
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-1a4 4 0 00-5-4M9 20H2v-1a4 4 0 015-4m8-5a4 4 0 11-8 0 4 4 0 018 0zm6 4a4 4 0 10-4-4 4 4 0 004 4z" />
@@ -1242,9 +1225,9 @@ export default function DeanDashboard() {
                 </span>
               </div>
               <p className="relative mt-4 text-3xl font-bold text-slate-900">Manage</p>
-              <p className="relative text-xs text-slate-500">Official student masterlist</p>
+              <p className="relative text-xs text-slate-500">Review imported student accounts</p>
               <div className="relative mt-5 inline-flex items-center gap-2 rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white shadow-lg shadow-sky-600/30 transition-all group-hover:-translate-y-0.5">
-                Open Masterlist
+                Review Queue
                 <span className="text-sm">-&gt;</span>
               </div>
             </Link>
@@ -1980,20 +1963,24 @@ export default function DeanDashboard() {
           {activeTab === "pendingStudents" && (
             <div id="pending-students" className="space-y-4">
               <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-6 border border-slate-200 shadow-lg shadow-slate-200/60">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900">Masterlist Management</h3>
-                    <p className="text-sm text-slate-600">
-                      Student accounts now come from the approved masterlist. Add records, import the CSV, and sync accounts from one place.
-                    </p>
+                    <h3 className="text-lg font-bold text-slate-900">Bulk Student Import</h3>
+                    <p className="text-sm text-slate-600">Import multiple students at once using the official CSV masterlist.</p>
                   </div>
-                  <Link
-                    href="/dashboard/dean/enrollment-records"
-                    className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-slate-800 shadow-lg shadow-slate-900/20"
+                  <button
+                    onClick={handleDownloadTemplate}
+                    className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-all font-medium text-sm"
                   >
-                    Open Masterlist
-                  </Link>
+                    Download Template
+                  </button>
                 </div>
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg hover:shadow-xl hover:shadow-purple-500/30 transition-all font-medium"
+                >
+                  Import Masterlist CSV
+                </button>
               </div>
 
               {pendingStudents.length === 0 ? (
@@ -2032,8 +2019,9 @@ export default function DeanDashboard() {
                       <span className="text-right">Actions</span>
                     </div>
                     {pendingStudents.map((student) => {
-                      const rec = enrolledRecords[String(student.id)];
-                      const hasMatch = hasEnrollmentMatch(student);
+                      const importedFromCsv = student.account_source === "masterlist_import";
+                      const rec = importedFromCsv ? { found: true } : null;
+                      const hasMatch = importedFromCsv;
                       const needsDeclaration = (student.is_transferee || student.is_irregular) && !student.declaration_verified;
                       const canApprove = canApproveStudent(student);
                       return (
@@ -2065,8 +2053,9 @@ export default function DeanDashboard() {
                               {!rec && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-slate-100 text-slate-500">Checking</span>}
                               {rec && !rec.found && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-red-100 text-red-700">No Record</span>}
                               {rec && rec.found && !hasMatch && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-amber-100 text-amber-700">Mismatch</span>}
-                              {!student.id_photo && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-slate-100 text-slate-500">No ID Photo</span>}
-                              {student.id_photo && !student.id_verified && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-amber-100 text-amber-700">ID Pending</span>}
+                              {importedFromCsv && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-sky-100 text-sky-700">Imported</span>}
+                              {!importedFromCsv && !student.id_photo && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-slate-100 text-slate-500">No ID Photo</span>}
+                              {!importedFromCsv && student.id_photo && !student.id_verified && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-amber-100 text-amber-700">ID Pending</span>}
                               {rec && rec.found && hasMatch && needsDeclaration && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-amber-100 text-amber-700">Declaration</span>}
                               {rec && rec.found && hasMatch && student.id_verified && !needsDeclaration && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-emerald-100 text-emerald-700">Ready</span>}
                             </div>
@@ -2354,7 +2343,7 @@ export default function DeanDashboard() {
                   <h2 className="text-xl font-bold text-slate-900">Student Verification</h2>
                   <p className="text-sm text-slate-600">Compare registration details with official enrollment record</p>
                 </div>
-                <button onClick={() => { setShowStudentModal(false); setEnrolledRecord(null); }} className="text-slate-500 hover:text-slate-700 text-2xl leading-none">x</button>
+                <button onClick={() => { setShowStudentModal(false); }} className="text-slate-500 hover:text-slate-700 text-2xl leading-none">x</button>
               </div>
               <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* LEFT - Student Registration */}
@@ -2460,45 +2449,54 @@ export default function DeanDashboard() {
                       )}
                     </div>
                   )}
-                  <div className="bg-white/80 border border-sky-200 rounded-xl p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">ID Photo Verification</p>
-                        <p className="text-xs text-slate-500">Review the uploaded school ID before approving the student.</p>
-                      </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${
-                        selectedStudent.id_verified
-                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                          : 'bg-amber-100 text-amber-700 border border-amber-200'
-                      }`}>
-                        {selectedStudent.id_verified ? 'Verified' : 'Pending'}
-                      </span>
+                  {selectedStudent.account_source === "masterlist_import" ? (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-2">
+                      <p className="text-sm font-semibold text-emerald-900">Imported from CSV Masterlist</p>
+                      <p className="text-sm text-emerald-800">
+                        This account was created from the official CSV import. Dean approval can proceed directly without document verification.
+                      </p>
                     </div>
-                    {selectedStudent.id_photo ? (
-                      <>
-                        <img
-                          src={selectedStudent.id_photo}
-                          alt={`${selectedStudent.first_name} ${selectedStudent.last_name} ID`}
-                          className="w-full max-w-sm rounded-xl border border-slate-200 object-cover"
-                        />
-                        <button
-                          onClick={() => handleIdPhotoVerify(selectedStudent.id, !selectedStudent.id_verified)}
-                          className={`w-full px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
-                            selectedStudent.id_verified
-                              ? 'bg-white border border-amber-200 text-amber-700 hover:bg-amber-50'
-                              : 'bg-sky-600 text-white hover:bg-sky-700'
-                          }`}
-                        >
-                          {selectedStudent.id_verified ? 'Mark as Pending Again' : 'Approve ID Photo'}
-                        </button>
-                      </>
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500 text-center">
-                        No ID photo uploaded yet.
+                  ) : (
+                    <div className="bg-white/80 border border-sky-200 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">ID Photo Verification</p>
+                          <p className="text-xs text-slate-500">Review the uploaded school ID before approving the student.</p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${
+                          selectedStudent.id_verified
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                            : 'bg-amber-100 text-amber-700 border border-amber-200'
+                        }`}>
+                          {selectedStudent.id_verified ? 'Verified' : 'Pending'}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                  {(selectedStudent.is_transferee || selectedStudent.is_irregular) && !selectedStudent.is_approved && (
+                      {selectedStudent.id_photo ? (
+                        <>
+                          <img
+                            src={selectedStudent.id_photo}
+                            alt={`${selectedStudent.first_name} ${selectedStudent.last_name} ID`}
+                            className="w-full max-w-sm rounded-xl border border-slate-200 object-cover"
+                          />
+                          <button
+                            onClick={() => handleIdPhotoVerify(selectedStudent.id, !selectedStudent.id_verified)}
+                            className={`w-full px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                              selectedStudent.id_verified
+                                ? 'bg-white border border-amber-200 text-amber-700 hover:bg-amber-50'
+                                : 'bg-sky-600 text-white hover:bg-sky-700'
+                            }`}
+                          >
+                            {selectedStudent.id_verified ? 'Mark as Pending Again' : 'Approve ID Photo'}
+                          </button>
+                        </>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500 text-center">
+                          No ID photo uploaded yet.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {(selectedStudent.is_transferee || selectedStudent.is_irregular) && !selectedStudent.is_approved && selectedStudent.account_source !== "masterlist_import" && (
                     <div className="bg-white/80 border border-sky-200 rounded-xl p-4 space-y-2">
                       <div className="flex items-center justify-between gap-3">
                         <div>
@@ -2539,73 +2537,47 @@ export default function DeanDashboard() {
                     </div>
                   )}
                 </div>
-                {/* RIGHT - Official Masterlist Record */}
+                {/* RIGHT - Account Summary */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-6 rounded-full bg-sky-500"></div>
-                    <h3 className="font-bold text-slate-900">Masterlist Reference</h3>
+                    <h3 className="font-bold text-slate-900">Account Summary</h3>
                     <span className="ml-auto text-xs bg-sky-200 text-sky-900 px-2 py-0.5 rounded-full font-semibold">System</span>
                   </div>
-                  {enrolledLoading ? (
-                    <div className="flex items-center justify-center h-48">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500"></div>
+                  <div className="space-y-3">
+                    <div className={`rounded-xl p-3 text-sm font-semibold text-center ${safeToApprove ? 'bg-sky-100 text-sky-900 border border-sky-200' : 'bg-amber-100 text-amber-900 border border-amber-200'}`}>
+                      {safeToApprove ? 'Ready to approve' : 'Review required before approval'}
                     </div>
-                  ) : !enrolledRecord?.found ? (
-                    <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-                      <p className="font-bold text-red-700 mb-1">No Masterlist Record Found</p>
-                      <p className="text-sm text-red-600">School ID <span className="font-mono font-bold">{selectedStudent.school_id}</span> does not match any officially enrolled student in the system.</p>
-                      <p className="text-xs text-red-600/80 mt-2">This student should be rejected.</p>
+                    <div className="bg-white/80 border border-sky-200 rounded-xl p-4 space-y-3 text-sm">
+                      {([
+                        ['Account Source', selectedStudent.account_source === 'masterlist_import' ? 'CSV Masterlist Import' : 'Manual Verification'],
+                        ['School ID Login', selectedStudent.school_id || '-'],
+                        ['Course', selectedStudent.course || '-'],
+                        ['Subjects', (selectedStudent.enrolled_subjects || []).length > 0 ? selectedStudent.enrolled_subjects.join(', ') : '-'],
+                      ] as [string, string][]).map(([label, value]) => (
+                        <div key={label} className="flex justify-between gap-4">
+                          <span className="text-slate-600 font-medium">{label}</span>
+                          <span className="text-slate-900 font-semibold text-right max-w-[65%] break-words">{value}</span>
+                        </div>
+                      ))}
                     </div>
-                  ) : (() => {
-                    const r = enrolledRecord.record;
-                    const checks = {
-                      name: `${selectedStudent.first_name} ${selectedStudent.last_name}`.toLowerCase() === `${r.first_name} ${r.last_name}`.toLowerCase(),
-                      school_id: selectedStudent.school_id === r.school_id,
-                      year_level: selectedStudent.year_level === r.year_level,
-                    };
-                    const allMatch = Object.values(checks).every(Boolean);
-                    return (
-                      <div className="space-y-3">
-                        <div className={`rounded-xl p-3 text-sm font-semibold text-center ${allMatch ? 'bg-sky-100 text-sky-900 border border-sky-200' : 'bg-amber-100 text-amber-900 border border-amber-200'}`}>
-                          {allMatch ? 'All details match - Safe to approve' : 'Some details do not match - Review carefully'}
-                        </div>
-                        <div className="bg-white/80 border border-sky-200 rounded-xl p-4 space-y-3 text-sm">
-                          {([
-                            ['Full Name', `${selectedStudent.first_name} ${selectedStudent.last_name}`, `${r.first_name} ${r.last_name}`, checks.name],
-                            ['School ID', selectedStudent.school_id, r.school_id, checks.school_id],
-                            ['Year Level', selectedStudent.year_level ? `${selectedStudent.year_level}${['st','nd','rd','th'][parseInt(selectedStudent.year_level)-1]||'th'} Year` : '-', r.year_level ? `${r.year_level}${['st','nd','rd','th'][parseInt(r.year_level)-1]||'th'} Year` : '-', checks.year_level],
-                            ['Department', '-', r.department, true],
-                            ['Email', selectedStudent.email, r.email || '-', true],
-                            ['Contact', selectedStudent.contact_number || '-', r.contact_number || '-', true],
-                          ] as [string,string,string,boolean][]).map(([label, sv, rv, matches]) => (
-                            <div key={label}>
-                              <p className="text-slate-600 font-medium mb-1">{label}</p>
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className={`px-2 py-1.5 rounded-lg text-xs font-semibold ${matches ? 'bg-sky-100 text-sky-900' : 'bg-red-100 text-red-700 ring-1 ring-red-200'}`}>
-                                  <span className="block text-[10px] text-slate-400 mb-0.5">Registered</span>{sv}
-                                </div>
-                                <div className={`px-2 py-1.5 rounded-lg text-xs font-semibold ${matches ? 'bg-sky-100 text-sky-900' : 'bg-red-100 text-red-700 ring-1 ring-red-200'}`}>
-                                  <span className="block text-[10px] text-slate-400 mb-0.5">Official Record</span>{rv}
-                                </div>
-                              </div>
-                              {!matches && <p className="text-xs text-red-600 mt-1">Mismatch detected</p>}
-                            </div>
-                          ))}
-                        </div>
+                    {selectedStudent.account_source === "masterlist_import" && (
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                        This student came directly from the imported CSV, so dean approval can happen here without checking a separate enrollment-record table.
                       </div>
-                    );
-                  })()}
+                    )}
+                  </div>
                   {activeTab === "pendingStudents" && !selectedStudent.is_approved && (
                     <div className="pt-2 flex gap-3">
                       <button
-                        onClick={() => { setShowStudentModal(false); setEnrolledRecord(null); openRejectModal(selectedStudent.id); }}
+                        onClick={() => { setShowStudentModal(false); openRejectModal(selectedStudent.id); }}
                         className="flex-1 px-4 py-3 bg-white border border-red-200 text-red-600 rounded-xl hover:bg-red-50 transition-all font-medium text-sm"
                       >
                         Reject
                       </button>
                       {safeToApprove && (
                         <button
-                          onClick={() => { handleApproveStudent(selectedStudent.id); setShowStudentModal(false); setEnrolledRecord(null); }}
+                          onClick={() => { handleApproveStudent(selectedStudent.id); setShowStudentModal(false); }}
                           className="flex-1 px-4 py-3 bg-sky-600 text-white rounded-xl hover:bg-sky-700 transition-all font-medium text-sm"
                         >
                           Approve Student
@@ -2997,6 +2969,127 @@ export default function DeanDashboard() {
                 >
                   Close
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Import Masterlist Modal */}
+        {showImportModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white/95 backdrop-blur-xl rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 shadow-2xl shadow-slate-900/10">
+              <div className="sticky top-0 bg-white/95 backdrop-blur-xl border-b border-slate-200 p-6 flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-slate-900">Import Masterlist CSV</h2>
+                <button
+                  onClick={() => {
+                    setShowImportModal(false);
+                    setImportFile(null);
+                    setImportResult(null);
+                  }}
+                  className="text-slate-400 hover:text-slate-600 text-2xl"
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6">
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <h3 className="font-bold text-slate-900 mb-2">Instructions</h3>
+                  <ol className="text-sm text-slate-700 space-y-1 list-decimal list-inside">
+                    <li>Download the masterlist template below</li>
+                    <li>Fill in the official student records from EDP</li>
+                    <li>Upload the completed CSV file for dean approval review</li>
+                  </ol>
+                  <p className="text-xs text-slate-500 mt-2">Required columns: school_id, email, first_name, last_name, year_level, course, subjects</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Select CSV File
+                  </label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileChange}
+                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+                  />
+                  {importFile && (
+                    <p className="mt-2 text-sm text-slate-600">
+                      Selected: <span className="font-semibold">{importFile.name}</span>
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleImportStudents}
+                  disabled={!importFile || importLoading}
+                  className="w-full px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-slate-900/20"
+                >
+                  {importLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Importing...
+                    </span>
+                  ) : (
+                    "Import Masterlist"
+                  )}
+                </button>
+
+                {importResult && (
+                  <div className="space-y-4">
+                    {importResult.error ? (
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                        <h4 className="font-bold text-red-900 mb-2">Import Failed</h4>
+                        <p className="text-sm text-red-700">{importResult.error}</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                          <h4 className="font-bold text-green-900 mb-2">Import Summary</h4>
+                          <div className="text-sm text-green-700 space-y-1">
+                            <p><span className="font-semibold">Successfully imported:</span> {importResult.success_count} student accounts</p>
+                            <p><span className="font-semibold">Errors:</span> {importResult.error_count}</p>
+                          </div>
+                        </div>
+
+                        {importResult.errors && importResult.errors.length > 0 && (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                            <h4 className="font-bold text-yellow-900 mb-3">Errors Found ({importResult.errors.length})</h4>
+                            <div className="max-h-64 overflow-y-auto space-y-3">
+                              {importResult.errors.map((error: any, index: number) => (
+                                <div key={index} className="bg-white rounded-lg p-3 border border-yellow-200">
+                                  <p className="text-sm font-semibold text-yellow-900 mb-1">
+                                    Row {error.row}: {error.error}
+                                  </p>
+                                  {error.data && (
+                                    <div className="text-xs text-slate-600 mt-2">
+                                      <p><span className="font-medium">Student ID:</span> {error.data.school_id}</p>
+                                      <p><span className="font-medium">Email:</span> {error.data.email}</p>
+                                      <p><span className="font-medium">Course:</span> {error.data.course}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {importResult.success_count > 0 && (
+                          <button
+                            onClick={() => {
+                              setShowImportModal(false);
+                              setImportFile(null);
+                              setImportResult(null);
+                            }}
+                            className="w-full px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-medium"
+                          >
+                            Done
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
