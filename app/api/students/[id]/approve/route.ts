@@ -21,7 +21,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (data.student_email) {
     try {
-      if (data.student_account_source === "masterlist_import" && data.student_reset_token) {
+      if (data.student_reset_token) {
         await sendBulkImportEmail(
           data.student_email,
           data.student_first_name ?? "there",

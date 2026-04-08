@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -10,6 +10,8 @@ type Step = 1 | 2 | 3;
 
 export default function ForgotPassword() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const directToken = searchParams.get("token");
   const [step, setStep] = useState<Step>(1);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -21,6 +23,12 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (directToken) {
+      router.replace(`/reset-password?token=${encodeURIComponent(directToken)}`);
+    }
+  }, [directToken, router]);
 
   const safeJson = async (res: Response) => {
     try {
@@ -168,7 +176,7 @@ export default function ForgotPassword() {
                 <form onSubmit={handleSendCode} className="space-y-5">
                   <div className="text-center mb-2">
                     <div className="text-4xl mb-2">📧</div>
-                    <p className="text-slate-600 text-sm">Enter your registered email address and we'll send you a 6-digit verification code.</p>
+                    <p className="text-slate-600 text-sm">Enter your registered email address and we&apos;ll send you a 6-digit verification code.</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Email Address</label>

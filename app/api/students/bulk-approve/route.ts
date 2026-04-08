@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       approvedStudents
         .filter((student) => !!student.email)
         .map((student) => {
-          if (student.account_source === "masterlist_import" && student.reset_token) {
+          if (student.reset_token) {
             return sendBulkImportEmail(
               student.email!,
               student.first_name ?? "there",

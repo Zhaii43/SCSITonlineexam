@@ -409,7 +409,7 @@ export async function sendResultsPublishedEmail(to: string, firstName: string, r
 }
 
 export async function sendBulkImportEmail(to: string, firstName: string, setPasswordToken: string, frontendUrl: string) {
-  const setPasswordLink = `${frontendUrl}/reset-password?token=${setPasswordToken}`;
+  const setPasswordLink = `${frontendUrl}/forgot-password?token=${setPasswordToken}`;
   await sendMail(
     to,
     "Your Student Account Has Been Approved - SCSIT Online Exam",
@@ -420,7 +420,7 @@ export async function sendBulkImportEmail(to: string, firstName: string, setPass
       <h2 style="margin:0 0 8px;">Your Student Account Is Approved</h2>
       <p>Hello <strong>${firstName}</strong>,</p>
       <p>Your SCSIT Online Exam account has been approved. Click the button below to set your password and activate your access.</p>
-      <p style="margin-top:24px;">${btn(setPasswordLink, "Set My Password")}</p>
+      <p style="margin-top:24px;">${btn(setPasswordLink, "Set Password")}</p>
       <p style="font-size:13px;color:#64748b;margin-top:16px;">After setting your password, log in using your <strong>Student ID</strong> and new password.</p>
     `,
     ),
