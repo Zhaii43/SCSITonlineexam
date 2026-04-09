@@ -9,6 +9,14 @@ import Footer from "@/components/Footer";
 import RoleShell from "@/components/RoleShell";
 
 import { API_URL, apiFetch } from "@/lib/api";
+
+type AssignedSubject = {
+  id: number;
+  subject_name: string;
+  department: string;
+  is_active: boolean;
+};
+
 export default function CreateExam() {
   const router = useRouter();
   const [editingExamId, setEditingExamId] = useState<number | null>(null);
@@ -18,6 +26,8 @@ export default function CreateExam() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [examId, setExamId] = useState<number | null>(null);
+  const [assignedSubjects, setAssignedSubjects] = useState<AssignedSubject[]>([]);
+  const [availableYearLevels, setAvailableYearLevels] = useState<string[]>([])
   
   const [formData, setFormData] = useState({
     title: "",
@@ -69,6 +79,37 @@ export default function CreateExam() {
       } catch {}
     }
   }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    const loadProfile = async () => {
+      try {
+        const res = await apiFetch(`${API_URL}/profile/`);
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data) return;
+
+        if (data.role === "instructor") {
+          const subjects: AssignedSubject[] = Array.isArray(data.assigned_subjects) ? data.assigned_subjects : [];
+          setAssignedSubjects(subjects);
+
+          if (!editingExamId) {
+            const firstActive = subjects.find((assignment) => assignment.is_active);
+            if (firstActive) {
+              setFormData((prev) => ({
+                ...prev,
+                subject: prev.subject || firstActive.subject_name,
+                department: prev.department || firstActive.department,
+              }));
+            }
+          }
+        }
+      } catch {}
+    };
+
+    loadProfile();
+  }, [editingExamId]);
 
   // Auto-save form to localStorage on every change (only for new exams)
   useEffect(() => {
@@ -133,6 +174,10 @@ export default function CreateExam() {
 
   const dashboardHref = role === "dean" ? "/dashboard/dean" : "/dashboard/teacher";
   const isDean = role === "dean";
+  const activeAssignedSubjects = assignedSubjects.filter((assignment) => assignment.is_active);
+  const selectedAssignedSubject = assignedSubjects.find(
+    (assignment) => assignment.subject_name === formData.subject && assignment.department === formData.department
+  );
 
   const departments = [
     { value: "BSHM", label: "Hospitality Management" },
@@ -155,6 +200,27 @@ export default function CreateExam() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleInstructorSubjectChange = (value: string) => {
+    const assignment = assignedSubjects.find((item) => String(item.id) === value);
+    if (!assignment) return;
+    setFormData((prev) => ({
+      ...prev,
+      subject: assignment.subject_name,
+      department: assignment.department,
+      year_level: [],
+    }));
+    const token = localStorage.getItem("access_token");
+    const params = new URLSearchParams({ subject: assignment.subject_name, department: assignment.department });
+    apiFetch(`${API_URL}/users/subject-year-levels/?${params}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const levels: string[] = Array.isArray(data.year_levels) ? data.year_levels : [];
+        setAvailableYearLevels(levels);
+        if (levels.length === 1) setFormData((prev) => ({ ...prev, year_level: [levels[0]] }));
+      })
+      .catch(() => setAvailableYearLevels([]));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -255,7 +321,7 @@ export default function CreateExam() {
             {editingExamId ? "Exam Updated Successfully" : "Exam Created Successfully"}
           </h2>
           <p className="text-slate-600 mb-6">
-            {isDean ? "Your exam is already approved. Now add questions to publish it to students." : "Now add questions to your exam."}
+            {isDean ? "Your exam is already approved. Now add questions to publish it to students." : "Your exam is approved automatically. Now add questions to publish it to students."}
           </p>
           <Link href={`/exam/questions/${examId}`} className="inline-block bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-all font-semibold shadow-lg shadow-slate-900/20">
             Add Questions
@@ -294,8 +360,13 @@ export default function CreateExam() {
               </h1>
               <div className="mt-2 h-1 w-12 rounded-full bg-gradient-to-r from-sky-500 to-blue-500" />
               <p className="mt-2 text-sm text-slate-600">
-                {isDean ? "Fill in the exam details. Dean-created exams approve automatically and can be shown to students as soon as questions are added." : "Fill in the exam details. It will be sent to the dean for approval."}
+                {isDean ? "Fill in the exam details. Dean-created exams approve automatically and can be shown to students as soon as questions are added." : "Fill in the exam details. Instructor-created exams are approved automatically and can be shown to students as soon as questions are added."}
               </p>
+              {!isDean && (
+                <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+                  You can only create exams for the active subjects assigned by your dean.
+                </div>
+              )}
               {!editingExamId && formData.title && (
                 <div className="mt-3 flex items-center justify-between rounded-lg bg-amber-50 border border-amber-200 px-4 py-2">
                   <p className="text-xs text-amber-800 font-medium">📝 Draft restored — your previous progress was saved.</p>
@@ -338,15 +409,36 @@ export default function CreateExam() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Subject *</label>
-                    <input
-                      name="subject"
-                      type="text"
-                      value={formData.subject}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200 transition-all"
-                      placeholder="Data Structures"
-                    />
+                    {isDean ? (
+                      <input
+                        name="subject"
+                        type="text"
+                        value={formData.subject}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200 transition-all"
+                        placeholder="Data Structures"
+                      />
+                    ) : (
+                      <select
+                        name="assigned_subject"
+                        value={selectedAssignedSubject ? String(selectedAssignedSubject.id) : ""}
+                        onChange={(e) => handleInstructorSubjectChange(e.target.value)}
+                        required
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200 transition-all"
+                      >
+                        <option value="">Select Assigned Subject</option>
+                        {assignedSubjects.map((assignment) => (
+                          <option
+                            key={assignment.id}
+                            value={assignment.id}
+                            disabled={!assignment.is_active}
+                          >
+                            {assignment.subject_name} ({assignment.department}){assignment.is_active ? "" : " - inactive"}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   <div>
@@ -403,18 +495,27 @@ export default function CreateExam() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Department *</label>
-                    <select
-                      name="department"
-                      value={formData.department}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200 transition-all"
-                    >
-                      <option value="">Select Department</option>
-                      {departments.map(dept => (
-                        <option key={dept.value} value={dept.value}>{dept.label}</option>
-                      ))}
-                    </select>
+                    {isDean ? (
+                      <select
+                        name="department"
+                        value={formData.department}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200 transition-all"
+                      >
+                        <option value="">Select Department</option>
+                        {departments.map(dept => (
+                          <option key={dept.value} value={dept.value}>{dept.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        value={departments.find((dept) => dept.value === formData.department)?.label || formData.department || ""}
+                        readOnly
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-700"
+                        placeholder={activeAssignedSubjects.length === 0 ? "No active assigned subjects" : "Department is set from the selected subject"}
+                      />
+                    )}
                   </div>
 
                   <div>
@@ -580,7 +681,7 @@ export default function CreateExam() {
 
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                 <p className="text-sm text-amber-800">
-                  {isDean ? "Because this is a dean account, this exam will approve automatically after creation." : "This exam will be sent to the dean for approval before it becomes available to students."}
+                  {isDean ? "Because this is a dean account, this exam will approve automatically after creation." : "Because this is an instructor account, this exam will approve automatically after creation and publish once questions are added."}
                 </p>
               </div>
 

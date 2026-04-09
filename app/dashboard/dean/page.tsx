@@ -145,16 +145,12 @@ interface TodayScheduleItem {
 const TAB_HASH_TO_KEY = {
   "#pending-students": "pendingStudents",
   "#rejected-students": "rejectedStudents",
-  "#pending-exams": "pending",
-  "#approved-exams": "approved",
   "#department-users": "users",
 } as const;
 
 const TAB_KEY_TO_HASH: Record<(typeof TAB_HASH_TO_KEY)[keyof typeof TAB_HASH_TO_KEY], keyof typeof TAB_HASH_TO_KEY> = {
   pendingStudents: "#pending-students",
   rejectedStudents: "#rejected-students",
-  pending: "#pending-exams",
-  approved: "#approved-exams",
   users: "#department-users",
 };
 
@@ -170,7 +166,7 @@ export default function DeanDashboard() {
   const [pendingStudents, setPendingStudents] = useState<any[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
   const [stats, setStats] = useState({ students: 0, instructors: 0, exams: 0 });
-  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "users" | "pendingStudents" | "rejectedStudents">("pendingStudents");
+  const [activeTab, setActiveTab] = useState<"users" | "pendingStudents" | "rejectedStudents">("pendingStudents");
   const [rejectedStudents, setRejectedStudents] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedExam, setSelectedExam] = useState<ExamDetail | null>(null);
@@ -225,6 +221,11 @@ export default function DeanDashboard() {
   const [showAllSessionsModal, setShowAllSessionsModal] = useState(false);
   const [showAllTerminationsModal, setShowAllTerminationsModal] = useState(false);
   const [showAllTodayModal, setShowAllTodayModal] = useState(false);
+  const [showSubjectAssignmentsModal, setShowSubjectAssignmentsModal] = useState(false);
+  const [selectedInstructorForSubjects, setSelectedInstructorForSubjects] = useState<any | null>(null);
+  const [subjectNameDraft, setSubjectNameDraft] = useState("");
+  const [subjectAssignmentLoading, setSubjectAssignmentLoading] = useState(false);
+  const [availableImportedSubjects, setAvailableImportedSubjects] = useState<string[]>([]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -250,8 +251,6 @@ export default function DeanDashboard() {
   const tabItems = [
     { key: "pendingStudents" as const, label: "Pending Students", count: pendingStudents.length },
     { key: "rejectedStudents" as const, label: "Rejected Students", count: rejectedStudents.length },
-    { key: "pending" as const, label: "Pending Exams", count: pendingExams.length },
-    { key: "approved" as const, label: "Approved Exams", count: approvedExams.length },
     { key: "users" as const, label: "Department Users", count: students.length + instructors.length },
   ];
   const activeTabIndex = tabItems.findIndex((t) => t.key === activeTab);
@@ -376,6 +375,127 @@ export default function DeanDashboard() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const openPendingStudentsQueue = () => {
+    setActiveTab("pendingStudents");
+    if (typeof window === "undefined") return;
+
+    window.history.replaceState(null, "", `${window.location.pathname}#pending-students`);
+    window.setTimeout(() => {
+      document.getElementById("pending-students")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  };
+
+  const refreshDepartmentUsers = async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    try {
+      const usersRes = await fetch(`${API_URL}/department/users/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!usersRes.ok) return;
+      const usersData = await usersRes.json();
+      setStudents(usersData.students);
+      setInstructors(usersData.instructors);
+      setAvailableImportedSubjects(Array.isArray(usersData.available_subjects) ? usersData.available_subjects : []);
+      setStats(prev => ({ ...prev, students: usersData.students.length, instructors: usersData.instructors.length }));
+      setSelectedInstructorForSubjects((prev: any) => prev ? usersData.instructors.find((i: any) => i.id === prev.id) || null : prev);
+    } catch {}
+  };
+
+  const openSubjectAssignmentsModal = (instructor: any) => {
+    setSelectedInstructorForSubjects(instructor);
+    setSubjectNameDraft("");
+    setShowSubjectAssignmentsModal(true);
+  };
+
+  const handleCreateSubjectAssignment = async () => {
+    if (!selectedInstructorForSubjects || !subjectNameDraft.trim()) {
+      toast.error("Select an imported subject first.");
+      return;
+    }
+
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    setSubjectAssignmentLoading(true);
+
+    try {
+      const res = await fetch(`${API_URL}/department/subject-assignments/create/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          instructor_id: selectedInstructorForSubjects.id,
+          subject_name: subjectNameDraft.trim(),
+          is_active: true,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Failed to assign subject.");
+        return;
+      }
+      setSubjectNameDraft("");
+      await refreshDepartmentUsers();
+      toast.success("Subject assigned successfully.");
+    } catch {
+      toast.error("Failed to assign subject.");
+    } finally {
+      setSubjectAssignmentLoading(false);
+    }
+  };
+
+  const handleToggleSubjectAssignment = async (assignmentId: number, nextValue: boolean) => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    setSubjectAssignmentLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/department/subject-assignments/${assignmentId}/`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ is_active: nextValue }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Failed to update subject status.");
+        return;
+      }
+      await refreshDepartmentUsers();
+      toast.success(nextValue ? "Subject activated." : "Subject deactivated.");
+    } catch {
+      toast.error("Failed to update subject status.");
+    } finally {
+      setSubjectAssignmentLoading(false);
+    }
+  };
+
+  const handleDeleteSubjectAssignment = async (assignmentId: number) => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    setSubjectAssignmentLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/department/subject-assignments/${assignmentId}/delete/`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Failed to delete subject assignment.");
+        return;
+      }
+      await refreshDepartmentUsers();
+      toast.success("Subject assignment deleted.");
+    } catch {
+      toast.error("Failed to delete subject assignment.");
+    } finally {
+      setSubjectAssignmentLoading(false);
+    }
+  };
+
   useEffect(() => {
     const storedInstructors = localStorage.getItem("dean_users_instructors_open");
     const storedStudents = localStorage.getItem("dean_users_students_open");
@@ -459,6 +579,7 @@ export default function DeanDashboard() {
         const d = await usersRes.json();
         setStudents(d.students);
         setInstructors(d.instructors);
+        setAvailableImportedSubjects(Array.isArray(d.available_subjects) ? d.available_subjects : []);
         setStats(prev => ({ ...prev, students: d.students.length, instructors: d.instructors.length }));
       }
       if (pendingStudentsRes.ok) {
@@ -586,6 +707,7 @@ export default function DeanDashboard() {
         const usersData = await usersRes.json();
         setStudents(usersData.students);
         setInstructors(usersData.instructors);
+        setAvailableImportedSubjects(Array.isArray(usersData.available_subjects) ? usersData.available_subjects : []);
         
         // Update stats with actual counts
         setStats({
@@ -1205,14 +1327,15 @@ export default function DeanDashboard() {
                 </span>
               </div>
               <p className="relative mt-4 text-3xl font-bold text-slate-900">{approvedExams.length}</p>
-              <p className="relative text-xs text-slate-500">Approved Exams</p>
+              <p className="relative text-xs text-slate-500">Published Exams</p>
               <div className="relative mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white shadow-lg shadow-emerald-600/30 transition-all group-hover:-translate-y-0.5">
                 View Stats
                 <span className="text-sm">-&gt;</span>
               </div>
             </Link>
-            <Link
-              href="/dashboard/dean#pending-students"
+            <button
+              type="button"
+              onClick={openPendingStudentsQueue}
               className="group relative overflow-hidden rounded-2xl border border-sky-200/70 bg-gradient-to-br from-white via-white to-sky-50 p-6 shadow-[0_10px_30px_-18px_rgba(2,132,199,0.35)] transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-18px_rgba(2,132,199,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
             >
               <div className="pointer-events-none absolute -right-12 -top-10 h-32 w-32 rounded-full bg-sky-200/50 blur-2xl transition-all group-hover:scale-110" />
@@ -1224,13 +1347,13 @@ export default function DeanDashboard() {
                   </svg>
                 </span>
               </div>
-              <p className="relative mt-4 text-3xl font-bold text-slate-900">Manage</p>
-              <p className="relative text-xs text-slate-500">Review imported student accounts</p>
+              <p className="relative mt-4 text-3xl font-bold text-slate-900">{pendingStudents.length}</p>
+              <p className="relative text-xs text-slate-500">Awaiting approval</p>
               <div className="relative mt-5 inline-flex items-center gap-2 rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white shadow-lg shadow-sky-600/30 transition-all group-hover:-translate-y-0.5">
                 Review Queue
                 <span className="text-sm">-&gt;</span>
               </div>
-            </Link>
+            </button>
             <Link
               href="/dashboard/dean/announcements"
               className="group relative overflow-hidden rounded-2xl border border-amber-200/70 bg-gradient-to-br from-white via-white to-amber-50 p-6 shadow-[0_10px_30px_-18px_rgba(180,83,9,0.45)] transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-18px_rgba(180,83,9,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
@@ -1251,20 +1374,6 @@ export default function DeanDashboard() {
                 <span className="text-sm">-&gt;</span>
               </div>
             </Link>
-
-            <div className="group relative overflow-hidden rounded-2xl border border-yellow-200/70 bg-gradient-to-br from-white via-white to-yellow-50 p-6 shadow-[0_10px_30px_-18px_rgba(161,98,7,0.45)] transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-18px_rgba(161,98,7,0.45)]">
-              <div className="pointer-events-none absolute -right-12 -top-10 h-32 w-32 rounded-full bg-yellow-200/60 blur-2xl transition-all group-hover:scale-110" />
-              <p className="relative text-slate-600 text-sm font-semibold uppercase tracking-wide">Pending Students</p>
-              <p className="relative mt-3 text-4xl font-bold text-yellow-700">{pendingStudents.length}</p>
-              <p className="relative text-xs text-slate-500">Awaiting approval</p>
-            </div>
-
-            <div className="group relative overflow-hidden rounded-2xl border border-orange-200/70 bg-gradient-to-br from-white via-white to-orange-50 p-6 shadow-[0_10px_30px_-18px_rgba(154,52,18,0.45)] transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-18px_rgba(154,52,18,0.45)]">
-              <div className="pointer-events-none absolute -right-12 -top-10 h-32 w-32 rounded-full bg-orange-200/60 blur-2xl transition-all group-hover:scale-110" />
-              <p className="relative text-slate-600 text-sm font-semibold uppercase tracking-wide">Pending Exams</p>
-              <p className="relative mt-3 text-4xl font-bold text-orange-700">{pendingExams.length}</p>
-              <p className="relative text-xs text-slate-500">For review</p>
-            </div>
 
           </div>
 
@@ -1520,7 +1629,7 @@ export default function DeanDashboard() {
               </div>
 
               <div className="relative hidden md:block">
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {tabItems.map((tab) => {
                     const isActive = activeTab === tab.key;
                     return (
@@ -1545,16 +1654,6 @@ export default function DeanDashboard() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                               </svg>
                             )}
-                            {tab.key === "pending" && (
-                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 11h14M5 7h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2z" />
-                              </svg>
-                            )}
-                            {tab.key === "approved" && (
-                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            )}
                             {tab.key === "users" && (
                               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A8 8 0 1119 12.5M15 21v-2a4 4 0 00-4-4H6" />
@@ -1574,7 +1673,7 @@ export default function DeanDashboard() {
                 </div>
                 <div className="relative mt-3 h-1.5 rounded-full bg-slate-200/70">
                   <span
-                    className="absolute top-0 h-1.5 w-1/5 rounded-full bg-gradient-to-r from-blue-500 to-sky-400 transition-transform duration-300"
+                    className="absolute top-0 h-1.5 w-1/3 rounded-full bg-gradient-to-r from-blue-500 to-sky-400 transition-transform duration-300"
                     style={{ transform: `translateX(${Math.max(0, activeTabIndex) * 100}%)` }}
                   />
                 </div>
@@ -1623,77 +1722,6 @@ export default function DeanDashboard() {
                 </div>
               )}
             </div>
-          )}
-
-          {activeTab === "pending" && (
-            <div id="pending-exams" className="space-y-4">
-            {pendingExams.length === 0 ? (
-              <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-12 border border-slate-200 shadow-lg shadow-slate-200/60 text-center">
-                <div className="text-6xl mb-4"></div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2">All Caught Up!</h3>
-                <p className="text-slate-600">No pending exam approvals at the moment.</p>
-              </div>
-            ) : (
-              pendingExams.map((exam) => (
-                <div
-                  key={exam.id}
-                  className="bg-white/90 backdrop-blur-xl rounded-3xl p-6 border border-amber-200 shadow-lg shadow-amber-200/60 hover:-translate-y-1 transition-all"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase bg-orange-100 text-orange-700">
-                          Pending Approval
-                        </span>
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase bg-blue-100 text-blue-700">
-                          {exam.exam_type}
-                        </span>
-                      </div>
-                      <h3 className="text-xl font-bold text-slate-900 mb-2">{exam.title}</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-slate-600">
-                        <div>
-                          <span className="block font-medium">Subject</span>
-                          <span>{exam.subject}</span>
-                        </div>
-                        <div>
-                          <span className="block font-medium">Instructor</span>
-                          <span>{exam.created_by}</span>
-                        </div>
-                        <div>
-                          <span className="block font-medium">Year Level</span>
-                          <span>{exam.year_level}</span>
-                        </div>
-                        <div>
-                          <span className="block font-medium">Schedule</span>
-                          <span>{new Date(exam.scheduled_date).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => handleViewExamDetails(exam.id)}
-                        className="px-5 py-3 bg-white border border-slate-300 text-slate-700 rounded-xl hover:border-slate-400 transition-all font-semibold"
-                      >
-                        View Details
-                      </button>
-                      <button
-                        onClick={() => handleRejectExam(exam.id)}
-                        className="px-5 py-3 bg-white border border-red-200 text-red-600 rounded-xl hover:bg-red-50 transition-all font-semibold"
-                      >
-                        Reject
-                      </button>
-                      <button
-                        onClick={() => handleApproveExam(exam.id)}
-                        className="px-5 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all font-semibold shadow-lg shadow-slate-900/20"
-                      >
-                        Approve
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
           )}
 
           {activeTab === "users" && (
@@ -1810,16 +1838,17 @@ export default function DeanDashboard() {
                       </div>
                       {instructorsOpen && (
                         <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 overflow-hidden">
-                          <div className="hidden md:grid grid-cols-[1.6fr_2.2fr_1.4fr_1fr] gap-4 px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-indigo-700 bg-indigo-100/70">
+                          <div className="hidden md:grid grid-cols-[1.4fr_1.9fr_1.2fr_1.4fr_180px] gap-4 px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-indigo-700 bg-indigo-100/70">
                             <span>Name</span>
                             <span>Email</span>
                             <span>Contact</span>
-                            <span>Type</span>
+                            <span>Subjects</span>
+                            <span className="text-right">Action</span>
                           </div>
                           {pagedInstructors.map((instructor, index) => (
                             <div
                               key={`${instructor.id}-${index}`}
-                              className="border-t border-indigo-100/80 bg-white/80 px-5 py-4 md:grid md:grid-cols-[1.6fr_2.2fr_1.4fr_1fr] md:items-center md:gap-4 hover:bg-white transition-all"
+                              className="border-t border-indigo-100/80 bg-white/80 px-5 py-4 md:grid md:grid-cols-[1.4fr_1.9fr_1.2fr_1.4fr_180px] md:items-center md:gap-4 hover:bg-white transition-all"
                             >
                               <div className="flex items-center gap-3">
                                 <div className="h-10 w-10 rounded-xl bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center">
@@ -1832,13 +1861,34 @@ export default function DeanDashboard() {
                               </div>
                               <p className="hidden md:block text-sm text-slate-700">{instructor.email}</p>
                               <p className="text-sm text-slate-700">{instructor.contact_number || "N/A"}</p>
-                              <span className={`inline-flex w-fit px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase ${
-                                instructor.subject_type === "General"
-                                  ? "bg-purple-100 text-purple-700"
-                                  : "bg-blue-100 text-blue-700"
-                              }`}>
-                                {instructor.subject_type}
-                              </span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {Array.isArray(instructor.assigned_subjects) && instructor.assigned_subjects.length > 0 ? (
+                                  instructor.assigned_subjects.map((assignment: any) => (
+                                    <span
+                                      key={assignment.id}
+                                      className={`inline-flex w-fit px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                                        assignment.is_active
+                                          ? "bg-blue-100 text-blue-700"
+                                          : "bg-slate-100 text-slate-500"
+                                      }`}
+                                    >
+                                      {assignment.subject_name}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="inline-flex w-fit px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500">
+                                    No subjects
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-3 md:mt-0 md:text-right">
+                                <button
+                                  onClick={() => openSubjectAssignmentsModal(instructor)}
+                                  className="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-indigo-700 hover:bg-indigo-100 transition-all"
+                                >
+                                  Manage Subjects
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -2142,88 +2192,139 @@ export default function DeanDashboard() {
             </div>
           )}
 
-          {activeTab === "approved" && (
-            <div id="approved-exams" className="space-y-4">
-              {approvedExams.length === 0 ? (
-                <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-12 border border-slate-200 shadow-lg shadow-slate-200/60 text-center">
-                  <div className="text-6xl mb-4"></div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">No Approved Exams</h3>
-                  <p className="text-slate-600">Approved exams will appear here.</p>
-                </div>
-              ) : (
-                approvedExams.map((exam) => (
-                  <div
-                    key={exam.id}
-                    className="bg-white/90 backdrop-blur-xl rounded-3xl p-6 border border-emerald-200 shadow-lg shadow-emerald-200/60 hover:-translate-y-1 transition-all"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase bg-green-100 text-green-700">
-                            Approved
-                          </span>
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase bg-blue-100 text-blue-700">
-                            {exam.exam_type}
-                          </span>
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase bg-purple-100 text-purple-700">
-                            {exam.department}
-                          </span>
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-900 mb-2">{exam.title}</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm text-slate-600">
-                          <div>
-                            <span className="block font-medium">Subject</span>
-                            <span>{exam.subject}</span>
-                          </div>
-                          <div>
-                            <span className="block font-medium">Created By</span>
-                            <span>{exam.created_by}</span>
-                          </div>
-                          <div>
-                            <span className="block font-medium">Year Level</span>
-                            <span>{exam.year_level}</span>
-                          </div>
-                          <div>
-                            <span className="block font-medium">Approved By</span>
-                            <span>{exam.approved_by}</span>
-                          </div>
-                          <div>
-                            <span className="block font-medium">Approved On</span>
-                            <span>{new Date(exam.approved_at).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-3">
-                        <button
-                          onClick={() => handleViewExamDetails(exam.id)}
-                          className="px-5 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all font-semibold shadow-lg shadow-slate-900/20"
-                        >
-                          View Details
-                        </button>
-                        {profile?.id === exam.created_by_id && (
-                          <Link
-                            href={`/exam/${exam.id}/results`}
-                            className="px-5 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all font-semibold shadow-lg shadow-emerald-600/20"
-                          >
-                            Results & Grading
-                          </Link>
-                        )}
-                        <button
-                          onClick={() => handleViewExamPhotos(exam.id)}
-                          className="px-6 py-3 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-semibold"
-                        >
-                          Review Photos
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
             </div>
           </DeanShell>
         </main>
+
+        {showSubjectAssignmentsModal && selectedInstructorForSubjects && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-indigo-500">Instructor Subjects</p>
+                  <h2 className="mt-2 text-2xl font-bold text-slate-900">
+                    {selectedInstructorForSubjects.first_name} {selectedInstructorForSubjects.last_name}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Manage the active subjects this instructor can use when creating exams.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowSubjectAssignmentsModal(false);
+                    setSelectedInstructorForSubjects(null);
+                    setSubjectNameDraft("");
+                  }}
+                  className="text-2xl leading-none text-slate-400 transition-all hover:text-slate-600"
+                  aria-label="Close subject assignments"
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="space-y-6 px-6 py-6">
+                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                    <div className="flex-1">
+                      <label className="mb-2 block text-sm font-medium text-slate-700">Imported Subject</label>
+                      <select
+                        value={subjectNameDraft}
+                        onChange={(e) => setSubjectNameDraft(e.target.value)}
+                        className="w-full rounded-xl border border-indigo-200 bg-white px-4 py-3 text-slate-900 outline-none transition-all focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+                      >
+                        <option value="">Select subject from imported masterlist</option>
+                        {availableImportedSubjects.map((subject) => (
+                          <option key={subject} value={subject}>
+                            {subject}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      onClick={handleCreateSubjectAssignment}
+                      disabled={subjectAssignmentLoading || !subjectNameDraft.trim()}
+                      className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {subjectAssignmentLoading ? "Saving..." : "Assign Subject"}
+                    </button>
+                  </div>
+                  <p className="mt-3 text-xs text-slate-500">
+                    Instructors can only create exams for active subjects assigned here. The choices come from the imported masterlist for this department.
+                  </p>
+                  {availableImportedSubjects.length === 0 && (
+                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                      No imported subjects are available yet. Import the masterlist CSV first so subject assignments can use real department subjects.
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-slate-900">Assigned Subjects</h3>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {Array.isArray(selectedInstructorForSubjects.assigned_subjects) ? selectedInstructorForSubjects.assigned_subjects.length : 0} total
+                    </span>
+                  </div>
+
+                  {Array.isArray(selectedInstructorForSubjects.assigned_subjects) &&
+                  selectedInstructorForSubjects.assigned_subjects.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedInstructorForSubjects.assigned_subjects.map((assignment: any) => (
+                        <div
+                          key={assignment.id}
+                          className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 md:flex-row md:items-center md:justify-between"
+                        >
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-base font-semibold text-slate-900">{assignment.subject_name}</p>
+                              <span
+                                className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                                  assignment.is_active
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-slate-100 text-slate-500"
+                                }`}
+                              >
+                                {assignment.is_active ? "Active" : "Inactive"}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-sm text-slate-500">Department: {assignment.department}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2 md:justify-end">
+                            <button
+                              onClick={() => handleToggleSubjectAssignment(assignment.id, !assignment.is_active)}
+                              disabled={subjectAssignmentLoading}
+                              className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+                                assignment.is_active
+                                  ? "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                  : "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                              }`}
+                            >
+                              {assignment.is_active ? "Deactivate" : "Activate"}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSubjectAssignment(assignment.id)}
+                              disabled={subjectAssignmentLoading}
+                              className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-red-700 transition-all hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center">
+                      <h3 className="text-lg font-semibold text-slate-900">No subjects assigned yet</h3>
+                      <p className="mt-2 text-sm text-slate-500">
+                        Add at least one active subject so this instructor can create exams for it.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Exam Details Modal */}
         {showExamModal && selectedExam && (

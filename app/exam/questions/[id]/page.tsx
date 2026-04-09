@@ -20,6 +20,8 @@ interface Question {
 interface ExamDetail {
   title: string;
   subject: string;
+  department: string;
+  year_level: string;
   question_type: string;
   total_points: number;
 }
@@ -180,11 +182,17 @@ export default function AddQuestions() {
       const data = await res.json();
 
       if (!res.ok) {
-        // Show mismatched department rows clearly
         if (data.mismatched_rows?.length) {
           const details = data.mismatched_rows
             .slice(0, 5)
-            .map((r: any) => `Row ${r.row}: "${r.question}..." (department: ${r.department})`)
+            .map((r: any) => {
+              const mismatchSummary = Array.isArray(r.mismatches)
+                ? r.mismatches
+                    .map((m: any) => `${m.field}: ${m.actual} (expected: ${m.expected})`)
+                    .join(", ")
+                : "invalid row";
+              return `Row ${r.row}: "${r.question}..." (${mismatchSummary})`;
+            })
             .join('\n');
           throw new Error(`${data.error}\n\n${details}`);
         }
@@ -438,45 +446,55 @@ export default function AddQuestions() {
 
           {/* CSV Import Modal */}
           {showImportModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-                <h3 className="text-2xl font-bold text-slate-900 mb-4">Import Questions from CSV</h3>
-                
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4 text-sm text-slate-700 space-y-1">
-                  <p className="font-semibold text-slate-900 mb-2">Required columns:</p>
-                  <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">question</span> — the question text</p>
-                  <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">type</span> — <span className="font-mono">multiple_choice</span> | <span className="font-mono">identification</span> | <span className="font-mono">enumeration</span> | <span className="font-mono">essay</span></p>
-                  <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">options</span> — for multiple choice only, separate with <span className="font-mono">|</span> e.g. <span className="font-mono">A|B|C|D</span></p>
-                  <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">correct_answer</span> — exact answer text</p>
-                  <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">points</span> — numeric value e.g. <span className="font-mono">2</span></p>
-                  <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">department</span> — must match this exam&apos;s department (e.g. <span className="font-mono">BSIT</span>, <span className="font-mono">BSED</span>). Rows with a different department will be <span className="text-red-600 font-semibold">rejected</span>. Leave blank to skip the check.</p>
-                  <p className="pt-1 text-amber-700 font-medium">⚠️ Importing replaces all existing questions for this exam.</p>
-                </div>
-
-                <a
-                  href="/sample_questions_template.csv"
-                  download="questions_template.csv"
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 mb-4 bg-sky-50 border border-sky-300 text-sky-700 rounded-xl hover:bg-sky-100 transition-all font-semibold text-sm"
-                >
-                  ⬇️ Download CSV Template
-                </a>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Select CSV File</label>
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={handleImportCSV}
-                    disabled={importing}
-                    className="w-full px-4 py-3 border border-sky-200 rounded-xl bg-white focus:ring-2 focus:ring-sky-500"
-                  />
-                </div>
-
-                <div className="flex gap-3">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+                  <h3 className="text-lg font-bold text-slate-900">Import Questions from CSV</h3>
                   <button
                     onClick={() => setShowImportModal(false)}
                     disabled={importing}
-                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all"
+                    className="text-slate-400 hover:text-slate-600 text-2xl leading-none disabled:opacity-50"
+                  >
+                    &times;
+                  </button>
+                </div>
+                <div className="overflow-y-auto px-6 py-4 space-y-4">
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-700 space-y-1.5">
+                    <p className="font-semibold text-slate-900">Required columns:</p>
+                    <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">question</span> &mdash; the question text</p>
+                    <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">type</span> &mdash; <span className="font-mono">multiple_choice</span> | <span className="font-mono">identification</span> | <span className="font-mono">enumeration</span> | <span className="font-mono">essay</span></p>
+                    <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">options</span> &mdash; multiple choice only, separate with <span className="font-mono">|</span> e.g. <span className="font-mono">A|B|C|D</span></p>
+                    <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">correct_answer</span> &mdash; exact answer text</p>
+                    <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">points</span> &mdash; numeric value e.g. <span className="font-mono">2</span></p>
+                    <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">subject</span> &mdash; must match: <span className="font-mono font-semibold text-slate-900">{exam?.subject}</span></p>
+                    <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">year_level</span> &mdash; must match: <span className="font-mono font-semibold text-slate-900">{exam?.year_level}</span></p>
+                    <p><span className="font-mono bg-white border border-slate-200 px-1 rounded">department</span> &mdash; optional, if provided must match: <span className="font-mono font-semibold text-slate-900">{exam?.department}</span></p>
+                    <p className="text-red-600 font-semibold pt-1">Any row with a different subject or year level is invalid, and the CSV will not be imported.</p>
+                    <p className="text-amber-700 font-medium">&#9888;&#65039; Importing replaces all existing questions for this exam.</p>
+                  </div>
+                  <a
+                    href="/sample_questions_template.csv"
+                    download="questions_template.csv"
+                    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-sky-50 border border-sky-300 text-sky-700 rounded-xl hover:bg-sky-100 transition-all font-semibold text-sm"
+                  >
+                    &#11015;&#65039; Download CSV Template
+                  </a>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Select CSV File</label>
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleImportCSV}
+                      disabled={importing}
+                      className="w-full px-4 py-3 border border-sky-200 rounded-xl bg-white focus:ring-2 focus:ring-sky-500 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="px-6 py-4 border-t border-slate-200 shrink-0">
+                  <button
+                    onClick={() => setShowImportModal(false)}
+                    disabled={importing}
+                    className="w-full px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium disabled:opacity-50"
                   >
                     Cancel
                   </button>

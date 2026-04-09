@@ -112,15 +112,15 @@ export default function DeanShell({ children }: { children: React.ReactNode }) {
                 </Link>
                 <Link href="/dashboard/dean#pending-students" onClick={() => setSidebarMobilePath(null)} className={itemClass("/dashboard/dean#pending-students", "mt-3")}>
                   <span className="h-2 w-2 rounded-full bg-sky-400" />
-                  Pending Students
+                  Student Review Queue
                 </Link>
-                <Link href="/dashboard/dean#pending-exams" onClick={() => setSidebarMobilePath(null)} className={itemClass("/dashboard/dean#pending-exams")}>
+                <Link href="/dashboard/dean#rejected-students" onClick={() => setSidebarMobilePath(null)} className={itemClass("/dashboard/dean#rejected-students")}>
                   <span className="h-2 w-2 rounded-full bg-sky-400" />
-                  Pending Exams
+                  Rejected Students
                 </Link>
-                <Link href="/dashboard/dean#approved-exams" onClick={() => setSidebarMobilePath(null)} className={itemClass("/dashboard/dean#approved-exams")}>
+                <Link href="/dashboard/dean#department-users" onClick={() => setSidebarMobilePath(null)} className={itemClass("/dashboard/dean#department-users")}>
                   <span className="h-2 w-2 rounded-full bg-sky-400" />
-                  Approved Exams
+                  Department Users
                 </Link>
                 <Link href="/exam/create" onClick={() => setSidebarMobilePath(null)} className={itemClass("/exam/create")}>
                   <span className="h-2 w-2 rounded-full bg-sky-400" />
@@ -185,15 +185,15 @@ export default function DeanShell({ children }: { children: React.ReactNode }) {
               </Link>
               <Link href="/dashboard/dean#pending-students" className={itemClass("/dashboard/dean#pending-students", "mt-3")}>
                 <span className="h-2 w-2 rounded-full bg-sky-400" />
-                Pending Students
+                Student Review Queue
               </Link>
-              <Link href="/dashboard/dean#pending-exams" className={itemClass("/dashboard/dean#pending-exams")}>
+              <Link href="/dashboard/dean#rejected-students" className={itemClass("/dashboard/dean#rejected-students")}>
                 <span className="h-2 w-2 rounded-full bg-sky-400" />
-                Pending Exams
+                Rejected Students
               </Link>
-              <Link href="/dashboard/dean#approved-exams" className={itemClass("/dashboard/dean#approved-exams")}>
+              <Link href="/dashboard/dean#department-users" className={itemClass("/dashboard/dean#department-users")}>
                 <span className="h-2 w-2 rounded-full bg-sky-400" />
-                Approved Exams
+                Department Users
               </Link>
               <Link href="/exam/create" className={itemClass("/exam/create")}>
                 <span className="h-2 w-2 rounded-full bg-sky-400" />
@@ -235,7 +235,7 @@ export default function DeanShell({ children }: { children: React.ReactNode }) {
 
             <div className="mt-4 rounded-xl border border-sky-800/60 bg-sky-800 px-3 py-3">
               <p className="text-[11px] uppercase tracking-[0.3em] text-sky-200/70">Quick Tip</p>
-              <p className="mt-2 text-xs text-sky-100/80">Import the official CSV first, then review and approve pending student accounts from the dean dashboard.</p>
+              <p className="mt-2 text-xs text-sky-100/80">Import the official CSV, approve student accounts, then assign subjects to instructors from Department Users.</p>
             </div>
           </div>
         </div>

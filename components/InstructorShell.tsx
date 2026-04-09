@@ -122,13 +122,14 @@ export default function InstructorShell({ children }: { children: React.ReactNod
                 </Link>
                 <Link href="/dashboard/teacher#my-exams" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/dashboard/teacher#my-exams", "mt-3")}>
                   <span className="h-2 w-2 rounded-full bg-sky-400" />
-                  My Exams
+                  Published Exams
                 </Link>
                 <Link href="/dashboard/teacher#active-sessions" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/dashboard/teacher#active-sessions")}>
                   <span className="h-2 w-2 rounded-full bg-sky-400" />
                   Active Sessions & Activity
                 </Link>
                 <Link href="/exam/create" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/exam/create")}>
+                  <span className="h-2 w-2 rounded-full bg-sky-400" />
                   Create Exam
                 </Link>
                 <Link href="/dashboard/teacher/announcements" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/dashboard/teacher/announcements")}>
@@ -184,7 +185,7 @@ export default function InstructorShell({ children }: { children: React.ReactNod
               </Link>
               <Link href="/dashboard/teacher#my-exams" className={itemClass("/dashboard/teacher#my-exams", "mt-3")}>
                 <span className="h-2 w-2 rounded-full bg-sky-400" />
-                My Exams
+                Published Exams
               </Link>
               <Link href="/dashboard/teacher#active-sessions" className={itemClass("/dashboard/teacher#active-sessions")}>
                 <span className="h-2 w-2 rounded-full bg-sky-400" />
@@ -226,7 +227,7 @@ export default function InstructorShell({ children }: { children: React.ReactNod
 
             <div className="mt-4 rounded-xl border border-sky-800/60 bg-sky-800 px-3 py-3">
               <p className="text-[11px] uppercase tracking-[0.3em] text-sky-200/70">Quick Tip</p>
-              <p className="mt-2 text-xs text-sky-100/80">Approved exams are read-only. Use &quot;Create Exam&quot; to post a new one.</p>
+              <p className="mt-2 text-xs text-sky-100/80">You can only create exams for the active subjects assigned by your dean. Use &quot;Eligible Students&quot; to review who can take each published exam.</p>
             </div>
           </div>
         </div>

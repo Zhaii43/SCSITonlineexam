@@ -97,7 +97,6 @@ export default function InstructorDashboard() {
  const [loading, setLoading] = useState(true);
  const [profile, setProfile] = useState<InstructorProfile | null>(null);
  const [exams, setExams] = useState<Exam[]>([]);
- const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
  const [error, setError] = useState<string | null>(null);
  const [searchQuery, setSearchQuery] = useState("");
  const [filterType, setFilterType] = useState<string>("all");
@@ -539,26 +538,13 @@ export default function InstructorDashboard() {
   );
  }
 
- const pendingExams = exams.filter(e => !e.is_approved);
  const approvedExams = exams.filter(e => e.is_approved);
  const upcomingExams = approvedExams.filter(e => e.status === "upcoming" || e.status === "ongoing");
  const completedExams = approvedExams.filter(e => e.status === "completed");
  const totalSubmissions = exams.reduce((sum, e) => sum + (e.submitted_count || 0), 0);
- const tabItems = [
-  { key: "pending" as const, label: "Pending Approval", count: pendingExams.length },
-  { key: "approved" as const, label: "Approved Exams", count: approvedExams.length },
- ];
- const activeTabIndex = tabItems.findIndex((t) => t.key === activeTab);
 
  // Filter and search logic
- const filteredPendingExams = pendingExams.filter(exam => {
-  const matchesSearch = exam.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-             exam.subject.toLowerCase().includes(searchQuery.toLowerCase());
-  const matchesType = filterType === "all" || exam.exam_type === filterType;
-  return matchesSearch && matchesType;
- });
-
- const filteredApprovedExams = approvedExams.filter(exam => {
+ const filteredPublishedExams = approvedExams.filter(exam => {
   const matchesSearch = exam.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
              exam.subject.toLowerCase().includes(searchQuery.toLowerCase());
   const matchesType = filterType === "all" || exam.exam_type === filterType;
@@ -613,13 +599,14 @@ export default function InstructorDashboard() {
           </Link>
           <Link href="/dashboard/teacher#my-exams" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/dashboard/teacher#my-exams", "mt-3")}>
            <span className="h-2 w-2 rounded-full bg-sky-400" />
-           My Exams
+           Published Exams
           </Link>
           <Link href="/dashboard/teacher#active-sessions" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/dashboard/teacher#active-sessions")}>
            <span className="h-2 w-2 rounded-full bg-sky-400" />
            Active Sessions & Activity
           </Link>
           <Link href="/exam/create" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/exam/create")}>
+           <span className="h-2 w-2 rounded-full bg-sky-400" />
            Create Exam
           </Link>
           <Link href="/dashboard/teacher/announcements" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/dashboard/teacher/announcements")}>
@@ -665,9 +652,9 @@ export default function InstructorDashboard() {
           <span className="h-2 w-2 rounded-full bg-sky-400" />
           {!sidebarCollapsed && "Dashboard"}
          </Link>
-         <Link href="/dashboard/teacher#my-exams" className={itemClass("/dashboard/teacher#my-exams", "mt-3")}>
+          <Link href="/dashboard/teacher#my-exams" className={itemClass("/dashboard/teacher#my-exams", "mt-3")}>
           <span className="h-2 w-2 rounded-full bg-sky-400" />
-          {!sidebarCollapsed && "My Exams"}
+          {!sidebarCollapsed && "Published Exams"}
          </Link>
          <Link href="/dashboard/teacher#active-sessions" className={itemClass("/dashboard/teacher#active-sessions")}>
           <span className="h-2 w-2 rounded-full bg-sky-400" />
@@ -695,10 +682,10 @@ export default function InstructorDashboard() {
          </Link>
         </nav>
         {!sidebarCollapsed && (
-         <div className="mt-4 rounded-xl border border-sky-800/60 bg-sky-800 px-3 py-3">
-          <p className="text-[11px] uppercase tracking-[0.3em] text-sky-200/70">Quick Tip</p>
-          <p className="text-xs text-sky-100/80 mt-2">Approved exams are read-only. Use “Create Exam” to post a new one.</p>
-         </div>
+        <div className="mt-4 rounded-xl border border-sky-800/60 bg-sky-800 px-3 py-3">
+         <p className="text-[11px] uppercase tracking-[0.3em] text-sky-200/70">Quick Tip</p>
+         <p className="text-xs text-sky-100/80 mt-2">Create exams only for the active subjects assigned by your dean. Use &quot;Eligible Students&quot; on any published exam to review who can take it.</p>
+        </div>
         )}
        </div>
       </aside>
@@ -707,7 +694,7 @@ export default function InstructorDashboard() {
        <div className="mb-4 flex items-center justify-between">
         <div>
          <h1 className="text-3xl font-semibold text-slate-900">Dashboard</h1>
-         <p className="text-sm text-slate-500">Overview of exams, submissions, and approvals.</p>
+         <p className="text-sm text-slate-500">Overview of published exams, submissions, and live activity.</p>
         </div>
         <div className="text-xs text-slate-500">
          <span className="text-sky-600 font-semibold">Home</span>
@@ -758,31 +745,43 @@ export default function InstructorDashboard() {
      <div className="mb-8 rounded-3xl border border-slate-200/80 bg-white/90 backdrop-blur-xl shadow-lg shadow-slate-200/60">
       <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-200/70">
        <div className="p-6 flex items-center gap-4">
-        <div className="h-11 w-11 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
-         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-         </svg>
-        </div>
-        <div>
-         <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Pending</p>
-         <p className="text-2xl font-semibold text-slate-900">{pendingExams.length}</p>
-         <p className="text-xs text-slate-500">Awaiting dean review</p>
-        </div>
-       </div>
-       <div className="p-6 flex items-center gap-4">
         <div className="h-11 w-11 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-700">
          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z" />
          </svg>
         </div>
         <div>
-         <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Approved</p>
+         <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Published</p>
          <p className="text-2xl font-semibold text-slate-900">{approvedExams.length}</p>
-         <p className="text-xs text-slate-500">Ready to run</p>
+         <p className="text-xs text-slate-500">Ready for students</p>
         </div>
        </div>
        <div className="p-6 flex items-center gap-4">
         <div className="h-11 w-11 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
+         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+         </svg>
+        </div>
+        <div>
+         <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Active / Upcoming</p>
+         <p className="text-2xl font-semibold text-slate-900">{upcomingExams.length}</p>
+         <p className="text-xs text-slate-500">Visible on student schedules</p>
+        </div>
+       </div>
+       <div className="p-6 flex items-center gap-4">
+        <div className="h-11 w-11 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700">
+         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17h6M9 7h6m-7 5h8m3 7H5a2 2 0 01-2-2V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2z" />
+         </svg>
+        </div>
+        <div>
+         <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Completed</p>
+         <p className="text-2xl font-semibold text-slate-900">{completedExams.length}</p>
+         <p className="text-xs text-slate-500">Finished exam runs</p>
+        </div>
+       </div>
+       <div className="p-6 flex items-center gap-4">
+        <div className="h-11 w-11 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h6m8-4v9a2 2 0 01-2 2H5a2 2 0 01-2-2V8" />
          </svg>
@@ -793,21 +792,6 @@ export default function InstructorDashboard() {
          <p className="text-xs text-slate-500">Student attempts</p>
         </div>
        </div>
-       <Link
-        href="/dashboard/teacher/announcements"
-        className="p-6 flex items-center gap-4 hover:bg-slate-50 transition-all"
-       >
-        <div className="h-11 w-11 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700">
-         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h6m8-4v9a2 2 0 01-2 2H5a2 2 0 01-2-2V8" />
-         </svg>
-        </div>
-        <div>
-         <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Announcements</p>
-         <p className="text-2xl font-semibold text-slate-900">{announcementsCount}</p>
-         <p className="text-xs text-slate-500">Total posts</p>
-        </div>
-       </Link>
       </div>
      </div>
      <div id="active-sessions" className="mb-8 relative overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white/95 via-white to-sky-50/80 backdrop-blur-xl p-6 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.45)]">
@@ -1165,8 +1149,8 @@ export default function InstructorDashboard() {
        </svg>
       </div>
       <div>
-       <h2 className="text-2xl font-semibold text-slate-900">My Exams</h2>
-       <p className="text-sm text-slate-600 mt-1">Track approvals, monitor progress, and manage student submissions.</p>
+       <h2 className="text-2xl font-semibold text-slate-900">Published Exams</h2>
+       <p className="text-sm text-slate-600 mt-1">Manage published exams, monitor progress, and review student submissions.</p>
       </div>
      </div>
      <div className="hidden md:flex items-center gap-2 text-xs text-slate-500 uppercase tracking-[0.2em]">
@@ -1174,75 +1158,6 @@ export default function InstructorDashboard() {
       Live Updates
      </div>
     </div>
-
-     <div className="mb-6">
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-gradient-to-r from-white via-slate-50 to-white p-3 shadow-lg shadow-slate-200/60">
-       <div className="pointer-events-none absolute -left-16 -top-12 h-28 w-28 rounded-full bg-sky-200/40 blur-2xl" />
-       <div className="pointer-events-none absolute -right-10 -bottom-10 h-28 w-28 rounded-full bg-blue-200/40 blur-2xl" />
-
-       <div className="md:hidden">
-        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Select Section</label>
-        <select
-         value={activeTab}
-         onChange={(e) => setActiveTab(e.target.value as typeof activeTab)}
-         className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm"
-        >
-         {tabItems.map((tab) => (
-          <option key={tab.key} value={tab.key}>
-           {tab.label} ({tab.count})
-          </option>
-         ))}
-        </select>
-       </div>
-
-       <div className="relative hidden md:block">
-        <div className="grid grid-cols-2 gap-2">
-         {tabItems.map((tab) => {
-          const isActive = activeTab === tab.key;
-          return (
-           <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`group relative rounded-xl px-4 py-3 text-xs font-semibold uppercase tracking-wide transition-all ${
-             isActive ? "text-blue-700" : "text-slate-600 hover:text-slate-900"
-            }`}
-           >
-            <span className="flex items-center justify-center gap-2">
-             <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border ${
-              isActive ? "border-blue-200 bg-blue-100 text-blue-700" : "border-slate-200 bg-white text-slate-500"
-             }`}>
-              {tab.key === "pending" && (
-               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 11h14M5 7h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2z" />
-               </svg>
-              )}
-              {tab.key === "approved" && (
-               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-               </svg>
-              )}
-             </span>
-             <span>{tab.label}</span>
-             <span className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-bold ${
-              isActive ? "bg-blue-100 text-blue-700" : "bg-slate-200/70 text-slate-600"
-             }`}>
-              {tab.count}
-             </span>
-            </span>
-           </button>
-          );
-         })}
-        </div>
-        <div className="relative mt-3 h-1.5 rounded-full bg-slate-200/70">
-         <span
-          className="absolute top-0 h-1.5 w-1/2 rounded-full bg-gradient-to-r from-blue-500 to-sky-400 transition-transform duration-300"
-          style={{ transform: `translateX(${Math.max(0, activeTabIndex) * 100}%)` }}
-         />
-        </div>
-       </div>
-      </div>
-     </div>
-
 
      {/* Search and Filters */}
      <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-6 border border-slate-200 shadow-lg shadow-slate-200/60 mb-6">
@@ -1272,91 +1187,28 @@ export default function InstructorDashboard() {
         <option value="final">Final</option>
         <option value="quiz">Quiz</option>
        </select>
-       {activeTab === "approved" && (
-        <select
-         value={filterStatus}
-         onChange={(e) => setFilterStatus(e.target.value)}
-         className="px-4 py-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-slate-200 text-slate-900"
-        >
-         <option value="all">All Status</option>
-         <option value="upcoming">Upcoming</option>
-         <option value="ongoing">Ongoing</option>
-         <option value="completed">Completed</option>
-        </select>
-       )}
+       <select
+        value={filterStatus}
+        onChange={(e) => setFilterStatus(e.target.value)}
+        className="px-4 py-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-slate-200 text-slate-900"
+       >
+        <option value="all">All Status</option>
+        <option value="upcoming">Upcoming</option>
+        <option value="ongoing">Ongoing</option>
+        <option value="completed">Completed</option>
+       </select>
       </div>
      </div>
 
-     {activeTab === "pending" && (
-      <div className="space-y-4">
-       {filteredPendingExams.length === 0 ? (
-        <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-12 border border-slate-200 shadow-lg shadow-slate-200/60 text-center">
-         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
-          <svg className="h-7 w-7 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10m-10 4h6m-9 5h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v11a2 2 0 002 2z" />
-          </svg>
-         </div>
-         <h3 className="text-xl font-bold text-slate-900 mb-2">No Pending Exams</h3>
-         <p className="text-slate-600">{searchQuery || filterType !== "all" ? "No exams match your search criteria." : "All your exams have been approved by the dean."}</p>
-        </div>
-       ) : (
-        <div className="rounded-2xl border border-amber-200/70 bg-white/95 shadow-md shadow-amber-200/35 overflow-hidden">
-         <div className="hidden md:grid grid-cols-[2fr_1.2fr_1fr_1fr] gap-4 px-6 py-3 text-[11px] uppercase tracking-[0.25em] text-slate-500 bg-amber-50 border-b border-amber-200/70">
-          <div>Exam</div>
-          <div>Schedule</div>
-          <div>Status</div>
-          <div>Actions</div>
-         </div>
-         <div className="divide-y divide-amber-200/60">
-          {filteredPendingExams.map((exam) => (
-           <div key={exam.id} className="grid grid-cols-1 md:grid-cols-[2fr_1.2fr_1fr_1fr] gap-4 px-6 py-4 items-start md:items-center">
-            <div>
-             <Link href={`/exam/${exam.id}/edit`} className="text-base font-semibold text-slate-900 hover:text-amber-700 transition-colors">
-              {exam.title}
-             </Link>
-             <p className="text-xs text-slate-500 mt-1">{exam.subject}</p>
-             <div className="mt-2 flex flex-wrap gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide bg-blue-100 text-blue-700">
-               {exam.exam_type}
-              </span>
-              <span className="text-[11px] text-slate-500">Points: {exam.total_points} pts</span>
-             </div>
-            </div>
-            <div className="text-sm text-slate-700">
-             <p className="font-medium">{new Date(exam.scheduled_date).toLocaleDateString()}</p>
-             <p className="text-xs text-slate-500">{exam.duration_minutes} mins</p>
-            </div>
-            <div>
-             <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide bg-yellow-100 text-yellow-700">
-              Pending
-             </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-             <Link href={`/exam/${exam.id}/edit`} className={btnPrimary}>
-              Edit
-             </Link>
-             <button onClick={() => handleViewEligibleStudents(exam.id)} className={btnOutline}>
-              Eligible Students
-             </button>
-            </div>
-           </div>
-          ))}
-         </div>
-        </div>
-       )}
-      </div>
-     )}
-
-     {activeTab === "approved" && (
       <div className="space-y-4 overflow-visible">
-       {filteredApprovedExams.length === 0 ? (
+       {filteredPublishedExams.length === 0 ? (
        <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-12 border border-slate-200 shadow-lg shadow-slate-200/60 text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
                   <svg className="h-7 w-7 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10m-10 4h6m-9 5h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v11a2 2 0 002 2z" />
                   </svg>
                 </div>
-        <h3 className="text-xl font-bold text-slate-900 mb-2">No Exams Yet</h3>
+        <h3 className="text-xl font-bold text-slate-900 mb-2">No Published Exams Yet</h3>
         <p className="text-slate-600 mb-6">{searchQuery || filterType !== "all" || filterStatus !== "all" ? "No exams match your search criteria." : "Create your first exam to get started."}</p>
        <Link
         href="/exam/create"
@@ -1374,7 +1226,7 @@ export default function InstructorDashboard() {
          <div>Actions</div>
         </div>
         <div className="divide-y divide-slate-200/70">
-         {filteredApprovedExams.map((exam) => (
+         {filteredPublishedExams.map((exam) => (
           <div key={exam.id} className="grid grid-cols-1 md:grid-cols-[2fr_1.2fr_1fr_2fr] gap-4 px-6 py-4 items-start md:items-center">
            <div>
             <Link href={`/exam/${exam.id}/edit`} className="text-base font-semibold text-slate-900 hover:text-sky-700 transition-colors">
@@ -1454,7 +1306,6 @@ export default function InstructorDashboard() {
        </div>
       )}
      </div>
-      )}
       </div>
      </div>
     </main>

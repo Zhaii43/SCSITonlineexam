@@ -63,7 +63,6 @@ export default function EditExam() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exam, setExam] = useState<any>(null);
-  const [isReadOnly, setIsReadOnly] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedQuestionType, setSelectedQuestionType] = useState("multiple_choice");
   const [currentQuestion, setCurrentQuestion] = useState<Question>({
@@ -152,8 +151,6 @@ export default function EditExam() {
       if (!res.ok) throw new Error("Failed to load exam");
       
       const data = await res.json();
-      
-      setIsReadOnly(Boolean(data.is_approved));
       
       setExam(data);
       
@@ -258,7 +255,6 @@ export default function EditExam() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isReadOnly) return;
     if (questions.length === 0) {
       alert("Please add at least one question");
       return;
@@ -373,8 +369,8 @@ export default function EditExam() {
             <Link href="/dashboard/teacher" className="text-sky-600 hover:text-sky-700 font-medium">
               Back to Dashboard
             </Link>
-            <h1 className="text-3xl font-bold text-slate-900 mt-4 mb-2">{isReadOnly ? "Exam Details" : "Edit Exam"}</h1>
-            <p className="text-slate-600">{isReadOnly ? "This exam is approved and read-only." : "Update exam details and questions"}</p>
+            <h1 className="text-3xl font-bold text-slate-900 mt-4 mb-2">Edit Exam</h1>
+            <p className="text-slate-600">Update exam details and questions</p>
           </div>
 
           <div className="mb-6 rounded-3xl border border-slate-200 bg-white/90 backdrop-blur-xl p-6 shadow-lg shadow-slate-200/60">
@@ -464,7 +460,6 @@ export default function EditExam() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <fieldset disabled={isReadOnly} className={isReadOnly ? "opacity-70" : ""}>
             <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-slate-200 p-6">
               <h3 className="text-lg font-semibold text-slate-900 mb-4">Exam Information</h3>
               
@@ -808,7 +803,6 @@ export default function EditExam() {
                 </div>
               )}
             </div>
-            </fieldset>
 
             <div className="flex gap-4">
               <Link
@@ -819,10 +813,10 @@ export default function EditExam() {
               </Link>
               <button
                 type="submit"
-                disabled={saving || questions.length === 0 || isReadOnly}
+                disabled={saving || questions.length === 0}
                 className="flex-1 bg-slate-900 text-white py-3 rounded-xl hover:bg-slate-800 transition-all font-semibold disabled:opacity-50 shadow-lg shadow-slate-900/20"
               >
-                {isReadOnly ? "Read Only" : (saving ? "Saving..." : "Save Changes")}
+                {saving ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </form>
