@@ -91,7 +91,7 @@ const roles = [
         steps: [
           "Student accounts are created from the official EDP masterlist, not by self-registration",
           "Wait for your department dean to approve your imported account",
-          "After approval, check your email and open the reset-password link",
+          "Check your email following confirmation. following your initial login, a temporary password will need to be changed.",
           "Set your password, then log in using your Student ID and new password",
           "If you are missing from the system, contact your dean or EDP office to verify your masterlist entry",
         ],
@@ -188,7 +188,7 @@ const roles = [
           "Go to the 'Pending Students' tab on your dashboard",
           "Review each imported masterlist account and confirm the Student ID, course, and subject load",
           "Approve individually or use bulk approve for multiple students",
-          "Approved students receive an email with a reset-password link before their first login",
+          "An email with a link to a temporary password is sent to approved students prior to their initial login.",
         ],
       },
       {

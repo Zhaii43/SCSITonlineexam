@@ -1,7 +1,7 @@
 // app/about/page.tsx
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
@@ -126,12 +126,7 @@ const mission = [
   { title: "Continuous Improvement", desc: "Meet regulatory requirements and continually improve the institution's quality management system." },
 ];
 
-const stats = [
-  { value: "5,000+", label: "Exams Conducted", icon: "clipboard" as IconName },
-  { value: "100+", label: "Active Users", icon: "users" as IconName },
-  { value: "90%", label: "Uptime", icon: "activity" as IconName },
-  { value: "24/7", label: "Support", icon: "life-buoy" as IconName },
-];
+
 
 export default function About() {
   const isLoggedIn = useSyncExternalStore(
@@ -139,6 +134,16 @@ export default function About() {
     () => !!window.localStorage.getItem("access_token"),
     () => false
   );
+  const [liveStats, setLiveStats] = useState<{ total_exams: number; total_users: number } | null>(null);
+  useEffect(() => {
+    fetch("/api/stats").then(r => r.json()).then(setLiveStats).catch(() => {});
+  }, []);
+  const stats = [
+    { value: liveStats ? String(liveStats.total_exams) : "—", label: "Exams Conducted", icon: "clipboard" as IconName },
+    { value: liveStats ? String(liveStats.total_users) : "—", label: "Active Users", icon: "users" as IconName },
+    { value: "99.9%", label: "Uptime", icon: "activity" as IconName },
+    { value: "24/7", label: "Support", icon: "life-buoy" as IconName },
+  ];
 
   return (
     <div

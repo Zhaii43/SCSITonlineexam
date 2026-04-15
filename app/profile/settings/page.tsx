@@ -634,7 +634,7 @@ export default function ProfileSettings() {
                       </div>
                       <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                         <p className="text-[11px] uppercase tracking-wide text-slate-500">
-                          {profile.role === "instructor" ? "Employee ID" : profile.role === "dean" ? "Dean ID" : "School ID"}
+                          {profile.role === "instructor" ? "Employee ID" : profile.role === "dean" ? "Dean ID" : profile.role === "edp" ? "EDP ID" : "School ID"}
                         </p>
                         <p className="text-sm font-semibold text-slate-900">{profile.school_id || "—"}</p>
                       </div>

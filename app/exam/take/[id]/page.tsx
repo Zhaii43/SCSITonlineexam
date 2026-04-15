@@ -69,8 +69,9 @@ export default function TakeExam() {
       sessionTokenRef.current = sessionStorage.getItem(sessionKey());
     }
     
-    fetchExam();
-    initCamera();
+    fetchExam().then(() => {
+      initCamera();
+    });
     const cleanup = setupAntiCheating();
     const unsubscribeNetwork = setupNetworkMonitoring();
 

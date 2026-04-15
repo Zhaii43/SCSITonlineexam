@@ -98,6 +98,7 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
     if (userRole === "student") return "/dashboard/student";
     if (userRole === "instructor") return "/dashboard/teacher";
     if (userRole === "dean") return "/dashboard/dean";
+    if (userRole === "edp") return "/dashboard/edp";
     return "/dashboard";
   };
 
@@ -120,14 +121,15 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
     "/dashboard/dean/students",
     "/dashboard/dean/announcements",
     "/dashboard/dean/reports",
+    "/dashboard/edp",
     "/dashboard/teacher/reports",
   ];
   const useDashboardChrome =
     mounted &&
-    (userRole === "instructor" || userRole === "dean") &&
+    (userRole === "instructor" || userRole === "dean" || userRole === "edp") &&
     pathname &&
     dashboardChromeRoutes.some((route) => pathname.startsWith(route));
-  const dashboardRoleLabel = userRole === "dean" ? "Dean" : "Instructor";
+  const dashboardRoleLabel = userRole === "dean" ? "Dean" : userRole === "edp" ? "EDP" : "Instructor";
 
   return (
     <header className="relative z-50">
@@ -375,7 +377,7 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
       </>
       )}
       {showLogoutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl">
             <div className="p-6 text-center">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-red-600">

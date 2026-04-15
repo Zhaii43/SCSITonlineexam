@@ -98,22 +98,7 @@ export default function Home() {
   ];
   const activityList = stats?.activity?.length ? stats.activity : activityFallback;
   const activityPreview = activityList.slice(0, 5);
-  const activityModalList = activityList.slice(0, 15);
   const hasMoreActivity = activityList.length > 5;
-
-  const handleOpenActivityModal = () => {
-    if (stats?.activity && stats.activity.length > 15) {
-      setStats({ ...stats, activity: stats.activity.slice(0, 15) });
-    }
-    setShowActivityModal(true);
-  };
-
-  const landingStats = [
-    { value: String(stats?.total_exams ?? 0), label: "Approved Exams", icon: "📋" },
-    { value: String(stats?.active_exams ?? 0), label: "Active Exams", icon: "⚡" },
-    { value: String(stats?.total_users ?? 0), label: "Registered Students", icon: "👥" },
-    { value: "24/7", label: "Support Available", icon: "🛟" },
-  ];
 
   return (
     <div
@@ -144,8 +129,8 @@ export default function Home() {
               </div>
 
               <h1 className="mt-4 text-5xl sm:text-6xl lg:text-7xl font-semibold tracking-tight leading-[1.05] text-slate-900">
-                Modern exams,
-                <span className="block mt-2 text-[var(--accent)]">calm, clean, controlled.</span>
+                SCSIT
+                <span className="block mt-2 text-[var(--accent)]">Online Exam</span>
               </h1>
 
               <p className="mt-4 text-lg text-slate-600 max-w-xl leading-relaxed">
@@ -256,7 +241,7 @@ export default function Home() {
                     ))}
                     {hasMoreActivity && (
                       <button
-                        onClick={handleOpenActivityModal}
+                        onClick={() => setShowActivityModal(true)}
                         className="w-full text-sm font-semibold text-slate-700 hover:text-slate-700 mt-1"
                       >
                         See more
@@ -269,37 +254,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── STATS STRIP ── */}
-        <section className="py-5 px-5 sm:px-8 lg:px-12 max-w-6xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {landingStats.map((s) => (
-              <div key={s.label} className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm transition-all hover:-translate-y-0.5">
-                <div className="text-2xl mb-1">{s.icon}</div>
-                <div className="text-3xl font-semibold text-slate-900">{s.value}</div>
-                <p className="text-slate-500 text-xs mt-0.5">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </section>
 
-        {/* Legacy hardcoded stats strip retained only to avoid encoding churn in this file. */}
-        <section className="hidden py-5 px-5 sm:px-8 lg:px-12 max-w-6xl mx-auto">
-          {/*
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {landingStats.map((s) => (
-              { value: "5,000+", label: "Exams Conducted", icon: "📋" },
-              { value: "99.9%", label: "Uptime Guarantee", icon: "⚡" },
-              { value: "100+", label: "Active Users", icon: "👥" },
-              { value: "24/7", label: "Support Available", icon: "🛟" },
-              <div key={s.label} className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm transition-all hover:-translate-y-0.5">
-                <div className="text-2xl mb-1">{s.icon}</div>
-                <div className="text-3xl font-semibold text-slate-900">{s.value}</div>
-                <p className="text-slate-500 text-xs mt-0.5">{s.label}</p>
-              </div>
-            ))}
-          </div>
-          */}
-        </section>
 
         {/* ── FEATURES ── */}
         <section className="py-8 px-5 sm:px-8 lg:px-12 max-w-7xl mx-auto">
@@ -400,17 +355,16 @@ export default function Home() {
               <p className="text-slate-600 mb-5 text-base max-w-md mx-auto">
                 Join the SCSIT examination portal and experience secure, smart, and seamless online exams.
               </p>
-              {mounted && !isLoggedIn && (
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              {mounted && (
+                isLoggedIn ? (
+                  <Link href={getDashboardUrl()} className="inline-flex items-center gap-2 bg-slate-900 text-white font-semibold px-6 py-2.5 rounded-full hover:-translate-y-0.5 transition-all shadow-lg shadow-slate-900/15 text-sm">
+                    Go to Dashboard
+                  </Link>
+                ) : (
                   <Link href="/login" className="inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-6 py-2.5 rounded-full hover:border-slate-400 transition-all hover:-translate-y-0.5 text-sm">
                     Sign In
                   </Link>
-                </div>
-              )}
-              {mounted && isLoggedIn && (
-                <Link href={getDashboardUrl()} className="inline-flex items-center gap-2 bg-slate-900 text-white font-semibold px-6 py-2.5 rounded-full hover:-translate-y-0.5 transition-all shadow-lg shadow-slate-900/15 text-sm">
-                  Go to Dashboard
-                </Link>
+                )
               )}
             </div>
           </div>
@@ -422,7 +376,7 @@ export default function Home() {
               <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">Recent Activity</h3>
-                  <p className="text-sm text-slate-500">Showing latest {activityModalList.length} records</p>
+                  <p className="text-sm text-slate-500">Showing latest {Math.min(activityList.length, 15)} records</p>
                 </div>
                 <button
                   onClick={() => setShowActivityModal(false)}
@@ -433,7 +387,7 @@ export default function Home() {
                 </button>
               </div>
               <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto">
-                {activityModalList.map((a, i) => (
+                {activityList.slice(0, 15).map((a, i) => (
                   <div key={i} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                     <div className="flex items-center gap-3">
                       <span className={`w-2 h-2 rounded-full ${a.dot}`} />

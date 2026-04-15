@@ -24,6 +24,8 @@ interface ExamDetail {
   year_level: string;
   question_type: string;
   total_points: number;
+  scheduled_date: string | null;
+  expiration_time: string | null;
 }
 
 const QUESTION_TYPES = [
@@ -56,6 +58,7 @@ export default function AddQuestions() {
   const [importing, setImporting] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [questionsSaved, setQuestionsSaved] = useState(false);
+  const [timeExpired, setTimeExpired] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -69,6 +72,17 @@ export default function AddQuestions() {
   const dashboardHref = role === "dean" ? "/dashboard/dean" : "/dashboard/teacher";
   const examDetailsHref = `/exam/create?examId=${examId}`;
 
+  const checkTimeExpired = (examData: ExamDetail) => {
+    const now = new Date();
+    if (examData.expiration_time && new Date(examData.expiration_time) <= now) {
+      setTimeExpired(true);
+      return;
+    }
+    if (examData.scheduled_date && new Date(examData.scheduled_date) <= now) {
+      setTimeExpired(true);
+    }
+  };
+
   const fetchExam = useCallback(async () => {
     const token = localStorage.getItem("access_token");
     try {
@@ -78,6 +92,7 @@ export default function AddQuestions() {
       if (res.ok) {
         const data = await res.json();
         setExam(data);
+        checkTimeExpired(data);
         const initialType = data.question_type === "mixed" ? "multiple_choice" : data.question_type;
         setCurrentQuestion(prev => ({ ...prev, type: initialType }));
         setSelectedQuestionType(initialType);
@@ -229,6 +244,38 @@ export default function AddQuestions() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 flex items-center justify-center">
         <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-sky-600"></div>
+      </div>
+    );
+  }
+
+  if (timeExpired) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl border border-red-200 p-8 text-center max-w-md mx-4">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-red-600">
+            <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Exam Schedule Has Passed</h2>
+          <p className="text-slate-600 text-sm mb-6">
+            The start time or expiration time for this exam has already passed. You can no longer add questions. Please update the exam schedule first.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Link
+              href={examDetailsHref}
+              className="w-full px-4 py-2.5 bg-sky-600 text-white rounded-xl hover:bg-sky-700 transition-all font-semibold text-sm text-center"
+            >
+              Update Exam Schedule
+            </Link>
+            <Link
+              href={dashboardHref}
+              className="w-full px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium text-sm text-center"
+            >
+              Back to Dashboard
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }

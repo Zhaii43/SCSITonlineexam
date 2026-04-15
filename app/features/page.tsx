@@ -1,7 +1,7 @@
 // app/features/page.tsx
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useEffect, useState } from "react";
 import Link from "next/link";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
@@ -163,12 +163,7 @@ const features = [
   },
 ];
 
-const highlights = [
-  { icon: "clipboard" as IconName, value: "5,000+", label: "Exams Conducted" },
-  { icon: "users" as IconName, value: "100+", label: "Active Users" },
-  { icon: "activity" as IconName, value: "90%", label: "Uptime" },
-  { icon: "life-buoy" as IconName, value: "24/7", label: "Support" },
-];
+
 
 export default function Features() {
   const isLoggedIn = useSyncExternalStore(
@@ -176,6 +171,16 @@ export default function Features() {
     () => !!window.localStorage.getItem("access_token"),
     () => false
   );
+  const [liveStats, setLiveStats] = useState<{ total_exams: number; total_users: number } | null>(null);
+  useEffect(() => {
+    fetch("/api/stats").then(r => r.json()).then(setLiveStats).catch(() => {});
+  }, []);
+  const highlights = [
+    { icon: "clipboard" as IconName, value: liveStats ? String(liveStats.total_exams) : "—", label: "Exams Conducted" },
+    { icon: "users" as IconName, value: liveStats ? String(liveStats.total_users) : "—", label: "Active Users" },
+    { icon: "activity" as IconName, value: "99.9%", label: "Uptime" },
+    { icon: "life-buoy" as IconName, value: "24/7", label: "Support" },
+  ];
 
   return (
     <div
@@ -260,14 +265,9 @@ export default function Features() {
                 <p className="text-slate-600 mb-5 text-base max-w-md mx-auto">
                   Join the SCSIT examination portal and experience all these features today.
                 </p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <Link href="/login" className="inline-flex items-center gap-2 bg-slate-900 text-white font-semibold px-6 py-2.5 rounded-full hover:-translate-y-0.5 transition-all shadow-lg shadow-slate-900/15 text-sm">
-                    Open Login
+                <Link href="/login" className="inline-flex items-center gap-2 bg-slate-900 text-white font-semibold px-6 py-2.5 rounded-full hover:-translate-y-0.5 transition-all shadow-lg shadow-slate-900/15 text-sm">
+                    Sign In
                   </Link>
-                  <Link href="/contact" className="inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-6 py-2.5 rounded-full hover:border-slate-400 transition-all text-sm">
-                    Contact Sales
-                  </Link>
-                </div>
               </div>
             </div>
           </section>

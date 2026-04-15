@@ -17,11 +17,11 @@ export default function Footer() {
     () => window.localStorage.getItem("user_role") || "",
     () => ""
   );
-  const usesSidebarChromeRole = userRole === "instructor" || userRole === "dean";
+  const usesSidebarChromeRole = userRole === "instructor" || userRole === "dean" || userRole === "edp";
   const [sidebarWidth, setSidebarWidth] = useState(() =>
     typeof window !== "undefined" &&
     window.innerWidth >= 1024 &&
-    ["instructor", "dean"].includes(window.localStorage.getItem("user_role") || "")
+    ["instructor", "dean", "edp"].includes(window.localStorage.getItem("user_role") || "")
       ? 240
       : 0
   );
@@ -58,6 +58,7 @@ export default function Footer() {
     if (userRole === "student") return "/dashboard/student";
     if (userRole === "instructor") return "/dashboard/teacher";
     if (userRole === "dean") return "/dashboard/dean";
+    if (userRole === "edp") return "/dashboard/edp";
     return "/dashboard";
   };
   const dashboardChromeRoutes = [
@@ -73,6 +74,7 @@ export default function Footer() {
     "/dashboard/dean",
     "/dashboard/dean/students",
     "/dashboard/dean/announcements",
+    "/dashboard/edp",
   ];
   const useDashboardChrome =
     usesSidebarChromeRole &&

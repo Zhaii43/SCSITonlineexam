@@ -74,6 +74,7 @@ export default function Login() {
         if (profileData.role === "student") window.location.href = "/dashboard/student";
         else if (profileData.role === "instructor") window.location.href = "/dashboard/teacher";
         else if (profileData.role === "dean") window.location.href = "/dashboard/dean";
+        else if (profileData.role === "edp") window.location.href = "/dashboard/edp";
         else window.location.href = "/dashboard";
       }, 1500);
     } else {
@@ -187,12 +188,12 @@ export default function Login() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="username" className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Student ID, Username, or Email
+                    School ID, Username, or Email
                   </label>
                   <input
                     id="username" name="username" type="text"
                     value={formData.username} onChange={handleChange} required
-                    placeholder="Enter your Student ID, username, or email"
+                    placeholder="Enter your School ID, Username, or Email"
                     className="w-full px-4 py-3 rounded-xl bg-white/80 border border-sky-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all text-sm"
                   />
                 </div>

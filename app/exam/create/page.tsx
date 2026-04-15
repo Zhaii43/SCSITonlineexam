@@ -15,6 +15,25 @@ type AssignedSubject = {
   subject_name: string;
   department: string;
   is_active: boolean;
+  year_levels?: string[];
+};
+
+const normalizeYearLevels = (values: unknown) => {
+  if (!Array.isArray(values)) return [];
+  return Array.from(
+    new Set(
+      values
+        .map((value) => String(value).trim())
+        .filter(Boolean)
+    )
+  ).sort();
+};
+
+const resolveSelectedYearLevels = (selectedLevels: string[], availableLevels: string[]) => {
+  const nextSelectedLevels = selectedLevels.filter((level) => availableLevels.includes(level));
+  if (nextSelectedLevels.length > 0) return nextSelectedLevels;
+  if (availableLevels.length === 1) return [availableLevels[0]];
+  return [];
 };
 
 export default function CreateExam() {
@@ -37,9 +56,8 @@ export default function CreateExam() {
     question_type: "multiple_choice",
     scheduled_date: "",
     scheduled_time: "",
-    expiration_date: "",
-    expiration_time: "",
-    duration_minutes: "",
+    end_date: "",
+    end_time: "",
     total_points: "",
     passing_score: "",
     instructions: "",
@@ -149,9 +167,8 @@ export default function CreateExam() {
           question_type: data.question_type || "multiple_choice",
           scheduled_date: scheduled ? scheduled.toISOString().slice(0, 10) : "",
           scheduled_time: scheduled ? scheduled.toTimeString().slice(0, 5) : "",
-          expiration_date: expiration ? expiration.toISOString().slice(0, 10) : "",
-          expiration_time: expiration ? expiration.toTimeString().slice(0, 5) : "",
-          duration_minutes: String(data.duration_minutes ?? ""),
+          end_date: expiration ? expiration.toISOString().slice(0, 10) : "",
+          end_time: expiration ? expiration.toTimeString().slice(0, 5) : "",
           total_points: String(data.total_points ?? ""),
           passing_score: String(data.passing_score ?? ""),
           instructions: data.instructions || "",
@@ -205,23 +222,63 @@ export default function CreateExam() {
   const handleInstructorSubjectChange = (value: string) => {
     const assignment = assignedSubjects.find((item) => String(item.id) === value);
     if (!assignment) return;
+    const assignmentYearLevels = normalizeYearLevels(assignment.year_levels);
+    setAvailableYearLevels(assignmentYearLevels);
     setFormData((prev) => ({
       ...prev,
       subject: assignment.subject_name,
       department: assignment.department,
-      year_level: [],
+      year_level: resolveSelectedYearLevels([], assignmentYearLevels),
     }));
-    const token = localStorage.getItem("access_token");
-    const params = new URLSearchParams({ subject: assignment.subject_name, department: assignment.department });
-    apiFetch(`${API_URL}/users/subject-year-levels/?${params}`)
-      .then((res) => res.json())
-      .then((data) => {
-        const levels: string[] = Array.isArray(data.year_levels) ? data.year_levels : [];
-        setAvailableYearLevels(levels);
-        if (levels.length === 1) setFormData((prev) => ({ ...prev, year_level: [levels[0]] }));
-      })
-      .catch(() => setAvailableYearLevels([]));
   };
+
+  useEffect(() => {
+    if (isDean) return;
+    if (!formData.subject || !formData.department) {
+      setAvailableYearLevels([]);
+      return;
+    }
+
+    const selectedAssignment = assignedSubjects.find(
+      (assignment) => assignment.subject_name === formData.subject && assignment.department === formData.department
+    );
+    const embeddedLevels = normalizeYearLevels(selectedAssignment?.year_levels);
+    const applyLevels = (levels: string[]) => {
+      setAvailableYearLevels(levels);
+      setFormData((prev) => {
+        const nextYearLevels = resolveSelectedYearLevels(prev.year_level, levels);
+        const isSameSelection =
+          nextYearLevels.length === prev.year_level.length &&
+          nextYearLevels.every((level, index) => level === prev.year_level[index]);
+        if (isSameSelection) return prev;
+        return { ...prev, year_level: nextYearLevels };
+      });
+    };
+
+    if (embeddedLevels.length > 0) {
+      applyLevels(embeddedLevels);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchYearLevels = async () => {
+      try {
+        const params = new URLSearchParams({ subject: formData.subject, department: formData.department });
+        const res = await apiFetch(`${API_URL}/subject-year-levels/?${params}`);
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        applyLevels(normalizeYearLevels(data.year_levels));
+      } catch {
+        if (cancelled) return;
+        applyLevels([]);
+      }
+    };
+
+    void fetchYearLevels();
+    return () => {
+      cancelled = true;
+    };
+  }, [assignedSubjects, formData.department, formData.subject, isDean]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,18 +293,22 @@ export default function CreateExam() {
 
     try {
       const scheduledDateTime = `${formData.scheduled_date}T${formData.scheduled_time}:00`;
-      
-      let expirationDateTime = null;
-      if (formData.expiration_date && formData.expiration_time) {
-        expirationDateTime = `${formData.expiration_date}T${formData.expiration_time}:00`;
+      const endDateTime = `${formData.end_date}T${formData.end_time}:00`;
+
+      const duration_minutes = Math.round((new Date(endDateTime).getTime() - new Date(scheduledDateTime).getTime()) / 60000);
+
+      if (duration_minutes <= 0) {
+        setError("End time must be after the start time.");
+        setLoading(false);
+        return;
       }
-      
+
       const examData = {
         ...formData,
         scheduled_date: scheduledDateTime,
-        expiration_time: expirationDateTime,
+        expiration_time: endDateTime,
         year_level: formData.year_level.join(','),
-        duration_minutes: parseInt(formData.duration_minutes),
+        duration_minutes,
         total_points: parseInt(formData.total_points),
         passing_score: parseInt(formData.passing_score),
         max_attempts: parseInt(formData.max_attempts) || 1,
@@ -286,6 +347,20 @@ export default function CreateExam() {
       setExamId(editingExamId ?? data.exam_id);
       // Clear the form draft now that the exam was successfully created
       try { localStorage.removeItem(getDraftKey()); } catch {}
+
+      // Block proceeding to questions if the scheduled time has already passed
+      const now = new Date();
+      const scheduledPassed = new Date(scheduledDateTime) <= now;
+      const endPassed = new Date(endDateTime) <= now;
+      if (scheduledPassed || endPassed) {
+        setError(
+          endPassed
+            ? "The end time you set has already passed. Please choose a future end time."
+            : "The start time you set has already passed. Please choose a future start time."
+        );
+        return;
+      }
+
       setSuccess(true);
     } catch (err: unknown) {
       if (err instanceof TypeError) {
@@ -372,7 +447,7 @@ export default function CreateExam() {
                   <p className="text-xs text-amber-800 font-medium">📝 Draft restored — your previous progress was saved.</p>
                   <button
                     type="button"
-                    onClick={() => { try { localStorage.removeItem(getDraftKey()); } catch {} setFormData({ title: "", subject: "", department: "", exam_type: "quiz", question_type: "multiple_choice", scheduled_date: "", scheduled_time: "", expiration_date: "", expiration_time: "", duration_minutes: "", total_points: "", passing_score: "", instructions: "", year_level: [], is_practice: false, max_attempts: "1", retake_policy: "none", question_pool_size: "0", shuffle_options: true }); }}
+                    onClick={() => { try { localStorage.removeItem(getDraftKey()); } catch {} setFormData({ title: "", subject: "", department: "", exam_type: "quiz", question_type: "multiple_choice", scheduled_date: "", scheduled_time: "", end_date: "", end_time: "", total_points: "", passing_score: "", instructions: "", year_level: [], is_practice: false, max_attempts: "1", retake_policy: "none", question_pool_size: "0", shuffle_options: true }); }}
                     className="text-xs font-semibold text-amber-700 hover:text-red-600 underline ml-4 shrink-0"
                   >
                     Clear Draft
@@ -520,24 +595,43 @@ export default function CreateExam() {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Year Level *</label>
-                    <select
-                      name="year_level"
-                      value={formData.year_level[0] || ""}
-                      onChange={(e) => setFormData(prev => ({ ...prev, year_level: [e.target.value] }))}
-                      required
-                      className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200 transition-all"
-                    >
-                      <option value="">Select Year Level</option>
-                      {yearLevels.map(year => (
-                        <option key={year.value} value={year.value}>{year.label}</option>
-                      ))}
-                    </select>
+                    {isDean ? (
+                      <select
+                        name="year_level"
+                        value={formData.year_level[0] || ""}
+                        onChange={(e) => setFormData(prev => ({ ...prev, year_level: [e.target.value] }))}
+                        required
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200 transition-all"
+                      >
+                        <option value="">Select Year Level</option>
+                        {yearLevels.map(year => (
+                          <option key={year.value} value={year.value}>{year.label}</option>
+                        ))}
+                      </select>
+                    ) : availableYearLevels.length > 0 ? (
+                      <select
+                        name="year_level"
+                        value={formData.year_level[0] || ""}
+                        onChange={(e) => setFormData(prev => ({ ...prev, year_level: [e.target.value] }))}
+                        required
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200 transition-all"
+                      >
+                        <option value="">Select Year Level</option>
+                        {availableYearLevels.map(v => (
+                          <option key={v} value={v}>{yearLevels.find(y => y.value === v)?.label ?? v}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 text-sm">
+                        {formData.subject ? 'No year levels found in masterlist for this subject' : 'Select a subject first'}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Schedule and Duration</h3>
+                <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Schedule</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -568,48 +662,45 @@ export default function CreateExam() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Expiration Date</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">End Date *</label>
                     <input
-                      name="expiration_date"
+                      name="end_date"
                       type="date"
-                      value={formData.expiration_date}
+                      value={formData.end_date}
                       onChange={handleChange}
+                      required
                       min={formData.scheduled_date || new Date().toISOString().split('T')[0]}
                       className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200 transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Expiration Time</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">End Time *</label>
                     <input
-                      name="expiration_time"
+                      name="end_time"
                       type="time"
-                      value={formData.expiration_time}
+                      value={formData.end_time}
                       onChange={handleChange}
+                      required
                       className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200 transition-all"
                     />
                   </div>
                 </div>
-                
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                  <p className="text-sm text-blue-800">
-                    Set an expiration time to prevent students from taking the exam after a specific date/time. Leave blank for no expiration.
-                  </p>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Duration (minutes) *</label>
-                  <input
-                    name="duration_minutes"
-                    type="number"
-                    value={formData.duration_minutes}
-                    onChange={handleChange}
-                    required
-                    min="1"
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-slate-200 transition-all"
-                    placeholder="60"
-                  />
-                </div>
+                {formData.scheduled_date && formData.scheduled_time && formData.end_date && formData.end_time && (() => {
+                  const mins = Math.round((new Date(`${formData.end_date}T${formData.end_time}`).getTime() - new Date(`${formData.scheduled_date}T${formData.scheduled_time}`).getTime()) / 60000);
+                  if (mins <= 0) return (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                      <p className="text-sm text-red-700">End time must be after start time.</p>
+                    </div>
+                  );
+                  const h = Math.floor(mins / 60), m = mins % 60;
+                  return (
+                    <div className="bg-sky-50 border border-sky-200 rounded-xl p-3">
+                      <p className="text-sm text-sky-800">Duration: <strong>{h > 0 ? `${h}h ` : ""}{m > 0 ? `${m}m` : ""}</strong> ({mins} minutes)</p>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="space-y-4">
@@ -694,7 +785,7 @@ export default function CreateExam() {
                 </Link>
                 <button
                   type="submit"
-                  disabled={loading || formData.year_level.length === 0}
+                  disabled={loading || formData.year_level.length === 0 || !formData.end_date || !formData.end_time}
                   className="flex-1 bg-slate-900 text-white py-3 px-6 rounded-xl hover:bg-slate-800 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-slate-900/20"
                 >
                   {loading ? (editingExamId ? "Updating..." : "Creating...") : (editingExamId ? "Update Exam" : "Create Exam")}

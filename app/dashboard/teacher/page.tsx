@@ -139,6 +139,15 @@ export default function InstructorDashboard() {
  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
  const [hash, setHash] = useState("");
+ const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+
+ useEffect(() => {
+  if (openDropdown === null) return;
+  const close = () => setOpenDropdown(null);
+  document.addEventListener('click', close);
+  return () => document.removeEventListener('click', close);
+ }, [openDropdown]);
+
  const btnPrimary = "inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-slate-900/20 hover:bg-sky-800 transition-all";
  const btnAccent = "inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-600/25 hover:bg-indigo-700 transition-all";
  const btnOutline = "inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-all";
@@ -1209,17 +1218,11 @@ export default function InstructorDashboard() {
                   </svg>
                 </div>
         <h3 className="text-xl font-bold text-slate-900 mb-2">No Published Exams Yet</h3>
-        <p className="text-slate-600 mb-6">{searchQuery || filterType !== "all" || filterStatus !== "all" ? "No exams match your search criteria." : "Create your first exam to get started."}</p>
-       <Link
-        href="/exam/create"
-        className={btnPrimary}
-       >
-        Create Exam
-       </Link>
+        <p className="text-slate-600">{searchQuery || filterType !== "all" || filterStatus !== "all" ? "No exams match your search criteria." : "Create your first exam to get started."}</p>
        </div>
       ) : (
-       <div className="rounded-2xl border border-slate-200/80 bg-white/95 shadow-md shadow-slate-200/40 overflow-hidden">
-        <div className="hidden md:grid grid-cols-[2fr_1.2fr_1fr_2fr] gap-4 px-6 py-3 text-[11px] uppercase tracking-[0.25em] text-slate-500 bg-slate-50 border-b border-slate-200/70">
+       <div className="rounded-2xl border border-slate-200/80 bg-white/95 shadow-md shadow-slate-200/40 overflow-visible">
+        <div className="hidden md:grid grid-cols-[2fr_1.2fr_1fr_210px] gap-4 px-6 py-3 text-[11px] uppercase tracking-[0.25em] text-slate-500 bg-slate-50 border-b border-slate-200/70">
          <div>Exam</div>
          <div>Schedule</div>
          <div>Status</div>
@@ -1227,7 +1230,7 @@ export default function InstructorDashboard() {
         </div>
         <div className="divide-y divide-slate-200/70">
          {filteredPublishedExams.map((exam) => (
-          <div key={exam.id} className="grid grid-cols-1 md:grid-cols-[2fr_1.2fr_1fr_2fr] gap-4 px-6 py-4 items-start md:items-center">
+          <div key={exam.id} className="grid grid-cols-1 md:grid-cols-[2fr_1.2fr_1fr_210px] gap-4 px-6 py-4 items-start md:items-center">
            <div>
             <Link href={`/exam/${exam.id}/edit`} className="text-base font-semibold text-slate-900 hover:text-sky-700 transition-colors">
              {exam.title}
@@ -1253,52 +1256,44 @@ export default function InstructorDashboard() {
              {exam.status}
             </span>
            </div>
-           <div className="flex flex-wrap gap-2">
-            <Link href={`/exam/${exam.id}/edit`} className={btnPrimary}>
-             View Details
+           <div className="flex items-center gap-1">
+            <Link href={`/exam/${exam.id}/edit`} className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-2 py-1.5 text-xs font-semibold text-white hover:bg-sky-800 transition-all">
+             Details
             </Link>
-            <button onClick={() => handleViewEligibleStudents(exam.id)} className={btnOutline}>
-             Eligible Students
-            </button>
-            <Link href={`/exam/${exam.id}/analytics`} className={btnAccent}>
-             Analytics
+            <Link href={`/exam/${exam.id}/results`} className="inline-flex items-center justify-center rounded-lg border border-sky-200 bg-sky-50 px-2 py-1.5 text-xs font-semibold text-sky-700 hover:bg-sky-100 hover:border-sky-300 transition-all">
+             Results
             </Link>
-            <Link href={`/exam/${exam.id}/results`} className={btnPrimary}>
-             View Results
+            <Link href={`/exam/${exam.id}/grade`} className="inline-flex items-center justify-center rounded-lg border border-violet-200 bg-violet-50 px-2 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-100 hover:border-violet-300 transition-all">
+             Grade
             </Link>
-            <button onClick={() => handleViewExamPhotos(exam.id)} className={btnOutline}>
-             Photos
-            </button>
-            {(exam.status === "ongoing" || exam.status === "upcoming") && (
-             <button onClick={() => handleOpenExtendModal(exam)} className={`${btnTint} border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100`}>
-              Extend Time
+            <div className="relative">
+             <button
+              onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === exam.id ? null : exam.id); }}
+              className="inline-flex items-center justify-center h-7 w-7 rounded-lg border border-slate-300 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:border-slate-400 transition-all"
+              title="More actions"
+             >
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
              </button>
-            )}
-            <a
-             href={`${API_URL}/exams/${exam.id}/results/export/`}
-             target="_blank"
-             className={`${btnTint} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}
-             onClick={(e) => {
-              const token = localStorage.getItem("access_token");
-              e.preventDefault();
-              fetch(`${API_URL}/exams/${exam.id}/results/export/`, {
-               headers: { Authorization: `Bearer ${token}` },
-              })
-              .then(res => res.blob())
-              .then(blob => {
-               const url = window.URL.createObjectURL(blob);
-               const a = document.createElement('a');
-               a.href = url;
-               a.download = `${exam.title.replace(/ /g, '_')}_results.csv`;
-               a.click();
-              });
-             }}
-            >
-             Export CSV
-            </a>
-            <Link href={`/exam/${exam.id}/grade`} className={`${btnTint} border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100`}>
-             Grade Exams
-            </Link>
+             {openDropdown === exam.id && (
+              <div className="absolute right-0 bottom-10 z-50 w-52 rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60 py-1 overflow-hidden">
+               <button onClick={() => { handleViewEligibleStudents(exam.id); setOpenDropdown(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Eligible Students</button>
+               <Link href={`/exam/${exam.id}/analytics`} onClick={() => setOpenDropdown(null)} className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Analytics</Link>
+               <button onClick={() => { handleViewExamPhotos(exam.id); setOpenDropdown(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Photos</button>
+               {(exam.status === "ongoing" || exam.status === "upcoming") && (
+                <button onClick={() => { handleOpenExtendModal(exam); setOpenDropdown(null); }} className="w-full text-left px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50">Extend Time</button>
+               )}
+               <button
+                onClick={() => {
+                 setOpenDropdown(null);
+                 const token = localStorage.getItem("access_token");
+                 fetch(`${API_URL}/exams/${exam.id}/results/export/`, { headers: { Authorization: `Bearer ${token}` } })
+                  .then(r => r.blob()).then(blob => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${exam.title.replace(/ /g, '_')}_results.csv`; a.click(); });
+                }}
+                className="w-full text-left px-4 py-2.5 text-sm text-emerald-700 hover:bg-emerald-50"
+               >Export CSV</button>
+              </div>
+             )}
+            </div>
            </div>
           </div>
          ))}
@@ -1596,9 +1591,9 @@ export default function InstructorDashboard() {
                {photosToShow.map((photo: any) => (
                 <div key={photo.id} className="space-y-1">
                  {photo.photo_url ? (
-                  <img src={photo.photo_url} alt={photo.capture_type} className={`w-full ${photoReviewCompact ? "h-20" : "h-32"} object-cover rounded-lg border border-slate-200`} />
+                  <img src={photo.photo_url} alt={photo.capture_type} className={`w-full ${photoReviewCompact ? "h-14" : "h-20"} object-cover rounded-lg border border-slate-200`} />
                  ) : (
-                  <div className={`w-full ${photoReviewCompact ? "h-20" : "h-32"} rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700 flex items-center justify-center text-center`}>
+                  <div className={`w-full ${photoReviewCompact ? "h-14" : "h-20"} rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700 flex items-center justify-center text-center`}>
                    {photo.text_summary || "Text summary available for this capture."}
                   </div>
                  )}

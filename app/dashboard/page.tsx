@@ -22,6 +22,7 @@ export default function DashboardRedirect() {
         if (data.role === "student") router.replace("/dashboard/student");
         else if (data.role === "instructor") router.replace("/dashboard/teacher");
         else if (data.role === "dean") router.replace("/dashboard/dean");
+        else if (data.role === "edp") router.replace("/dashboard/edp");
         else router.replace("/login");
       })
       .catch(() => router.replace("/login"));

@@ -141,6 +141,9 @@ export async function POST(request: Request) {
           data.username,
           data.schoolId,
           data.frontendUrl,
+          data.enrolledSubjects ?? [],
+          data.department ?? "",
+          data.yearLevel ?? "",
         );
         break;
 

@@ -160,6 +160,7 @@ export default function NotificationBell() {
         if (role === "student") target = "/dashboard/student";
         else if (role === "instructor") target = "/dashboard/teacher";
         else if (role === "dean") target = "/dashboard/dean";
+        else if (role === "edp") target = "/dashboard/edp";
         else target = "/dashboard";
       }
       router.push(target);
