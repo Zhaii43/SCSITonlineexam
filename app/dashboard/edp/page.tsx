@@ -7,7 +7,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import EdpShell from "@/components/EdpShell";
 import { useToast } from "@/components/ToastProvider";
-import { API_URL } from "@/lib/api";
+import { API_URL, apiFetch } from "@/lib/api";
 
 type EdpProfile = {
   id: number;
@@ -114,19 +114,17 @@ export default function EdpDashboard() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState(initialAddForm);
   const [addLoading, setAddLoading] = useState(false);
-  const fetchRecords = async (query = recordSearch) => {
-    const token = localStorage.getItem("access_token");
-    if (!token) return;
-
+  const fetchRecords = async (query?: string) => {
+    const trimmedQuery = (query ?? recordSearch).trim();
     setRecordsLoading(true);
     try {
-      const trimmedQuery = query.trim();
       const url = trimmedQuery
         ? `${API_URL}/enrolled-records/?search=${encodeURIComponent(trimmedQuery)}`
         : `${API_URL}/enrolled-records/`;
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await apiFetch(url);
       if (!res.ok) throw new Error("Failed to load records.");
-      setRecords(await res.json());
+      const data = await res.json();
+      setRecords(data);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load records.";
       toast.error(message);
@@ -201,25 +199,31 @@ export default function EdpDashboard() {
 
   const handleDeleteRecord = async (id: number) => {
     if (!confirm("Delete this masterlist entry? This cannot be undone.")) return;
-    const token = localStorage.getItem("access_token");
     setDeletingId(id);
     try {
-      const res = await fetch(`${API_URL}/enrolled-records/${id}/delete/`, {
-        method: "DELETE", headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) { setRecords(prev => prev.filter(r => r.id !== id)); toast.success("Record deleted."); }
-      else { const d = await res.json().catch(() => ({})); toast.error(d.error || "Failed to delete."); }
+      const res = await apiFetch(`${API_URL}/enrolled-records/${id}/delete/`, { method: "DELETE" });
+      if (res.ok) {
+        await fetchRecords("");
+        toast.success("Record deleted.");
+      } else {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d.error || "Failed to delete.");
+      }
     } catch { toast.error("Failed to delete record."); }
     finally { setDeletingId(null); }
   };
 
   const handleAddRecord = async () => {
-    const token = localStorage.getItem("access_token");
+    const { school_id, first_name, last_name, year_level, course, subjects } = addForm;
+    if (!school_id || !first_name || !last_name || !year_level || !course || !subjects) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
     setAddLoading(true);
     try {
-      const res = await fetch(`${API_URL}/enrolled-records/add/`, {
+      const res = await apiFetch(`${API_URL}/enrolled-records/add/`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...addForm }),
       });
       const data = await res.json().catch(() => ({}));
