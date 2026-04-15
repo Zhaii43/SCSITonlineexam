@@ -737,7 +737,9 @@ export default function DeanDashboard() {
   };
 
   const canApproveStudent = (student: any) => {
-    if (student.account_source === "masterlist_import") return true;
+    const source = String(student?.account_source || "").toLowerCase();
+    const isMasterlistImport = source === "masterlist_import" || source.includes("masterlist");
+    if (isMasterlistImport) return true;
     if (!student.id_photo) return false;
     if (!student.id_verified) return false;
     if ((student.is_transferee || student.is_irregular) && !student.declaration_verified) return false;
@@ -1077,6 +1079,9 @@ export default function DeanDashboard() {
     }
   };
   const safeToApprove = selectedStudent ? canApproveStudent(selectedStudent) : false;
+  const selectedStudentSource = String(selectedStudent?.account_source || "").toLowerCase();
+  const selectedStudentIsMasterlistImport =
+    selectedStudentSource === "masterlist_import" || selectedStudentSource.includes("masterlist");
 
   if (loading) {
     return (
@@ -2129,7 +2134,7 @@ export default function DeanDashboard() {
                       )}
                     </div>
                   )}
-                  {selectedStudent.account_source === "masterlist_import" ? (
+                  {selectedStudentIsMasterlistImport ? (
                     <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-2">
                       <p className="text-sm font-semibold text-emerald-900">Imported from CSV Masterlist</p>
                       <p className="text-sm text-emerald-800">
@@ -2176,7 +2181,7 @@ export default function DeanDashboard() {
                       )}
                     </div>
                   )}
-                  {(selectedStudent.is_transferee || selectedStudent.is_irregular) && !selectedStudent.is_approved && selectedStudent.account_source !== "masterlist_import" && (
+                  {(selectedStudent.is_transferee || selectedStudent.is_irregular) && !selectedStudent.is_approved && !selectedStudentIsMasterlistImport && (
                     <div className="bg-white/80 border border-sky-200 rounded-xl p-4 space-y-2">
                       <div className="flex items-center justify-between gap-3">
                         <div>
@@ -2229,12 +2234,18 @@ export default function DeanDashboard() {
                       const subjects = selectedStudent.enrolled_subjects || [];
                       return (
                         <>
-                    <div className={`rounded-xl p-3 text-sm font-semibold text-center ${safeToApprove ? 'bg-sky-100 text-sky-900 border border-sky-200' : 'bg-amber-100 text-amber-900 border border-amber-200'}`}>
-                      {safeToApprove ? 'Ready to approve' : 'Review required before approval'}
+                    <div className={`rounded-xl p-3 text-sm font-semibold text-center ${
+                      selectedStudent.is_approved || safeToApprove
+                        ? 'bg-sky-100 text-sky-900 border border-sky-200'
+                        : 'bg-amber-100 text-amber-900 border border-amber-200'
+                    }`}>
+                      {selectedStudent.is_approved
+                        ? (selectedStudentIsMasterlistImport ? 'Auto-approved from masterlist' : 'Already approved')
+                        : (safeToApprove ? 'Ready to approve' : 'Review required before approval')}
                     </div>
                     <div className="bg-white/80 border border-sky-200 rounded-xl p-4 space-y-3 text-sm">
                       {([
-                        ['Account Source', selectedStudent.account_source === 'masterlist_import' ? 'CSV Masterlist Import' : 'Manual Verification'],
+                        ['Account Source', selectedStudentIsMasterlistImport ? 'CSV Masterlist Import' : 'Manual Verification'],
                         ['School ID Login', selectedStudent.school_id || '-'],
                         ['Course', selectedStudent.course || '-'],
                         ['Subjects', subjects.length > 0 ? subjects.join(', ') : '-'],
@@ -2245,7 +2256,7 @@ export default function DeanDashboard() {
                         </div>
                       ))}
                     </div>
-                    {selectedStudent.account_source === "masterlist_import" && (
+                    {selectedStudentIsMasterlistImport && (
                       <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                         This student came directly from the imported CSV, so dean approval can happen here without checking a separate enrollment-record table. After approval, the student receives an email with their School ID as both username and temporary password, and must change it on first login.
                       </div>
