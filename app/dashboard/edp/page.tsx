@@ -171,26 +171,39 @@ export default function EdpDashboard() {
   const handleImportStudents = async () => {
     if (!importFile) { toast.error("Select a CSV file first."); return; }
     setImportLoading(true); setImportResult(null);
-    const token = localStorage.getItem("access_token");
     const formData = new FormData();
     formData.append("file", importFile);
     try {
-      const res = await fetch(`${API_URL}/enrolled-records/import/`, {
-        method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData,
+      const res = await apiFetch(`${API_URL}/enrolled-records/import/`, {
+        method: "POST",
+        body: formData,
       });
       const data: ImportResult = await res.json().catch(() => ({}));
-      setImportResult(data);
       if (!res.ok) throw new Error(data.error || "Import failed");
+      setImportResult(data);
       setImportFile(null);
-      setImportResult(null);
-      toast.success(`Imported ${data.success_count || 0} entries. Syncing accounts...`);
-      // Auto-sync after successful import
-      const syncRes = await fetch(`${API_URL}/enrolled-records/sync-accounts/`, {
-        method: "POST", headers: { Authorization: `Bearer ${token}` },
-      });
-      const syncData = await syncRes.json().catch(() => ({}));
-      if (syncRes.ok) toast.success(syncData.message || "Accounts synced.");
-      await fetchRecords("");
+      toast.success(`Imported ${data.success_count || 0} entries.`);
+
+      // Auto-sync after successful import, but don't mark import as failed if sync has issues.
+      try {
+        const syncRes = await apiFetch(`${API_URL}/enrolled-records/sync-accounts/`, {
+          method: "POST",
+        });
+        const syncData = await syncRes.json().catch(() => ({}));
+        if (syncRes.ok) {
+          toast.success(syncData.message || "Accounts synced.");
+        } else {
+          toast.info(syncData.error || "Import succeeded, but account sync did not complete.");
+        }
+      } catch {
+        toast.info("Import succeeded, but account sync could not be reached.");
+      }
+
+      try {
+        await fetchRecords("");
+      } catch {
+        toast.info("Import succeeded. Refresh the page to see the latest masterlist.");
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Import failed";
       setImportResult({ error: message }); toast.error(message);
