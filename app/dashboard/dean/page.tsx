@@ -143,14 +143,10 @@ interface TodayScheduleItem {
 }
 
 const TAB_HASH_TO_KEY = {
-  "#pending-students": "pendingStudents",
-  "#rejected-students": "rejectedStudents",
   "#department-users": "users",
 } as const;
 
-const TAB_KEY_TO_HASH: Record<(typeof TAB_HASH_TO_KEY)[keyof typeof TAB_HASH_TO_KEY], keyof typeof TAB_HASH_TO_KEY> = {
-  pendingStudents: "#pending-students",
-  rejectedStudents: "#rejected-students",
+const TAB_KEY_TO_HASH: Record<"users", "#department-users"> = {
   users: "#department-users",
 };
 
@@ -166,7 +162,7 @@ export default function DeanDashboard() {
   const [pendingStudents, setPendingStudents] = useState<any[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
   const [stats, setStats] = useState({ students: 0, instructors: 0, exams: 0 });
-  const [activeTab, setActiveTab] = useState<"users" | "pendingStudents" | "rejectedStudents">("pendingStudents");
+  const [activeTab, setActiveTab] = useState<"users">("users");
   const [rejectedStudents, setRejectedStudents] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedExam, setSelectedExam] = useState<ExamDetail | null>(null);
@@ -205,6 +201,8 @@ export default function DeanDashboard() {
   const [studentsOpen, setStudentsOpen] = useState(true);
   const examSocketRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<number | null>(null);
+  const liveDataInFlightRef = useRef(false);
+  const monitoringInFlightRef = useRef(false);
   const [monitoring, setMonitoring] = useState<{
     active_sessions: MonitoringSession[];
     latest_terminations: MonitoringTermination[];
@@ -245,11 +243,9 @@ export default function DeanDashboard() {
   }, [activeTab]);
 
   const tabItems = [
-    { key: "pendingStudents" as const, label: "Pending Students", count: pendingStudents.length },
-    { key: "rejectedStudents" as const, label: "Rejected Students", count: rejectedStudents.length },
     { key: "users" as const, label: "Department Users", count: students.length + instructors.length },
   ];
-  const activeTabIndex = tabItems.findIndex((t) => t.key === activeTab);
+  const activeTabIndex = 0;
 
   const normalizedUserSearch = userSearch.trim().toLowerCase();
   const matchesUserSearch = (values: Array<string | null | undefined>) => {
@@ -296,7 +292,7 @@ export default function DeanDashboard() {
     const interval = setInterval(() => {
       fetchLiveData();
       fetchMonitoring();
-    }, 5000);
+    }, 15000);
     const handleFocus = () => {
       fetchLiveData();
       fetchMonitoring();
@@ -334,7 +330,7 @@ export default function DeanDashboard() {
             data?.type === "student_verification_update" ||
             data?.type === "enrollment_records_update"
           ) {
-            fetchLiveData();
+            fetchLiveData({ includeUsers: true });
           }
         } catch {}
       };
@@ -372,13 +368,9 @@ export default function DeanDashboard() {
   };
 
   const openPendingStudentsQueue = () => {
-    setActiveTab("pendingStudents");
+    setActiveTab("users");
     if (typeof window === "undefined") return;
-
-    window.history.replaceState(null, "", `${window.location.pathname}#pending-students`);
-    window.setTimeout(() => {
-      document.getElementById("pending-students")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 0);
+    window.history.replaceState(null, "", `${window.location.pathname}#department-users`);
   };
 
   const refreshDepartmentUsers = async () => {
@@ -555,23 +547,32 @@ export default function DeanDashboard() {
     window.open(targetUrl, "_blank", "noopener,noreferrer");
   };
 
-  const fetchLiveData = async () => {
+  const fetchLiveData = async (options?: { includeUsers?: boolean }) => {
+    if (liveDataInFlightRef.current) return;
     const token = localStorage.getItem("access_token");
     if (!token) return;
+    liveDataInFlightRef.current = true;
+    const includeUsers = options?.includeUsers ?? false;
     try {
-      const [pendingExamsRes, approvedRes, usersRes, pendingStudentsRes, rejectedStudentsRes, auditCountRes, announcementsRes, draftExamsRes] = await Promise.all([
+      const requests: Array<Promise<Response>> = [
         fetch(`${API_URL}/exams/pending/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/exams/approved/`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_URL}/department/users/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/students/pending/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/students/rejected/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/audit/count/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/notifications/announcements/mine/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/exams/drafts/`, { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
+      ];
+
+      if (includeUsers) {
+        requests.push(fetch(`${API_URL}/department/users/`, { headers: { Authorization: `Bearer ${token}` } }));
+      }
+
+      const responses = await Promise.all(requests);
+      const [pendingExamsRes, approvedRes, pendingStudentsRes, rejectedStudentsRes, auditCountRes, announcementsRes, draftExamsRes, usersRes] = responses;
       if (pendingExamsRes.ok) setPendingExams(await pendingExamsRes.json());
       if (approvedRes.ok) setApprovedExams(await approvedRes.json());
-      if (usersRes.ok) {
+      if (includeUsers && usersRes?.ok) {
         const d = await usersRes.json();
         setStudents(d.students);
         setInstructors(d.instructors);
@@ -603,11 +604,16 @@ export default function DeanDashboard() {
         setAnnouncementsCount(Array.isArray(data.announcements) ? data.announcements.length : 0);
       }
     } catch {}
+    finally {
+      liveDataInFlightRef.current = false;
+    }
   };
 
   const fetchMonitoring = async () => {
+    if (monitoringInFlightRef.current) return;
     const token = localStorage.getItem("access_token");
     if (!token) return;
+    monitoringInFlightRef.current = true;
     try {
       const res = await fetch(`${API_URL}/exams/monitoring/`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -640,6 +646,8 @@ export default function DeanDashboard() {
         }
         return message;
       });
+    } finally {
+      monitoringInFlightRef.current = false;
     }
   };
 
@@ -674,72 +682,10 @@ export default function DeanDashboard() {
 
       setProfile(profileData);
 
-      // Fetch pending exams
-      const examsRes = await fetch(`${API_URL}/exams/pending/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (examsRes.ok) {
-        const examsData = await examsRes.json();
-        setPendingExams(examsData);
-      }
-
-      // Fetch approved exams
-      const approvedRes = await fetch(`${API_URL}/exams/approved/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (approvedRes.ok) {
-        const approvedData = await approvedRes.json();
-        setApprovedExams(approvedData);
-      }
-
-      // Fetch department users
-      const usersRes = await fetch(`${API_URL}/department/users/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (usersRes.ok) {
-        const usersData = await usersRes.json();
-        setStudents(usersData.students);
-        setInstructors(usersData.instructors);
-        setAvailableImportedSubjects(Array.isArray(usersData.available_subjects) ? usersData.available_subjects : []);
-        
-        // Update stats with actual counts
-        setStats({
-          students: usersData.students.length,
-          instructors: usersData.instructors.length,
-          exams: stats.exams
-        });
-      }
-
-      // Fetch pending students
-      const pendingStudentsRes = await fetch(`${API_URL}/students/pending/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (pendingStudentsRes.ok) {
-        const pendingStudentsData = await pendingStudentsRes.json();
-        setPendingStudents(pendingStudentsData);
-      }
-
-      const auditCountRes = await fetch(`${API_URL}/audit/count/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (auditCountRes.ok) {
-        const data = await auditCountRes.json();
-        setAuditCount(data.count || 0);
-      }
-
-      const announcementsRes = await fetch(`${API_URL}/notifications/announcements/mine/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (announcementsRes.ok) {
-        const data = await announcementsRes.json();
-        setAnnouncementsCount(Array.isArray(data.announcements) ? data.announcements.length : 0);
-      }
-
-      fetchMonitoring();
+      await Promise.all([
+        fetchLiveData({ includeUsers: true }),
+        fetchMonitoring(),
+      ]);
 
       setLoading(false);
     } catch (err: any) {
@@ -1540,123 +1486,6 @@ export default function DeanDashboard() {
           )}
 
 
-          <div className="mb-6">
-            <div className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-gradient-to-r from-white via-slate-50 to-white p-3 shadow-lg shadow-slate-200/60">
-              <div className="pointer-events-none absolute -left-16 -top-12 h-28 w-28 rounded-full bg-sky-200/40 blur-2xl" />
-              <div className="pointer-events-none absolute -right-10 -bottom-10 h-28 w-28 rounded-full bg-blue-200/40 blur-2xl" />
-
-              <div className="md:hidden">
-                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Select Section</label>
-                <select
-                  value={activeTab}
-                  onChange={(e) => setActiveTab(e.target.value as typeof activeTab)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm"
-                >
-                  {tabItems.map((tab) => (
-                    <option key={tab.key} value={tab.key}>
-                      {tab.label} ({tab.count})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="relative hidden md:block">
-                <div className="grid grid-cols-3 gap-2">
-                  {tabItems.map((tab) => {
-                    const isActive = activeTab === tab.key;
-                    return (
-                      <button
-                        key={tab.key}
-                        onClick={() => setActiveTab(tab.key)}
-                        className={`group relative rounded-xl px-4 py-3 text-xs font-semibold uppercase tracking-wide transition-all ${
-                          isActive ? "text-blue-700" : "text-slate-600 hover:text-slate-900"
-                        }`}
-                      >
-                        <span className="flex items-center justify-center gap-2">
-                          <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border ${
-                            isActive ? "border-blue-200 bg-blue-100 text-blue-700" : "border-slate-200 bg-white text-slate-500"
-                          }`}>
-                            {tab.key === "pendingStudents" && (
-                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-1a4 4 0 00-5-4M9 20H2v-1a4 4 0 015-4m8-5a4 4 0 11-8 0 4 4 0 018 0zm6 4a4 4 0 10-4-4 4 4 0 004 4z" />
-                              </svg>
-                            )}
-                            {tab.key === "rejectedStudents" && (
-                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                              </svg>
-                            )}
-                            {tab.key === "users" && (
-                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A8 8 0 1119 12.5M15 21v-2a4 4 0 00-4-4H6" />
-                              </svg>
-                            )}
-                          </span>
-                          <span>{tab.label}</span>
-                          <span className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                            isActive ? "bg-blue-100 text-blue-700" : "bg-slate-200/70 text-slate-600"
-                          }`}>
-                            {tab.count}
-                          </span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="relative mt-3 h-1.5 rounded-full bg-slate-200/70">
-                  <span
-                    className="absolute top-0 h-1.5 w-1/3 rounded-full bg-gradient-to-r from-blue-500 to-sky-400 transition-transform duration-300"
-                    style={{ transform: `translateX(${Math.max(0, activeTabIndex) * 100}%)` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-
-          {activeTab === "rejectedStudents" && (
-            <div id="rejected-students" className="space-y-4">
-              {rejectedStudents.length === 0 ? (
-                <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-12 border border-slate-200 shadow-lg shadow-slate-200/60 text-center">
-                  <div className="text-6xl mb-4">✅</div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">No Rejected Students</h3>
-                  <p className="text-slate-600">All rejected students have either appealed or none have been rejected yet.</p>
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-red-200 bg-red-50/60 overflow-hidden">
-                  <div className="hidden md:grid grid-cols-[1.2fr_1.6fr_2.4fr_1fr_1fr_2fr] items-center px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-red-800 border-b border-red-200 bg-red-200/70">
-                    <span>School ID</span>
-                    <span>Name</span>
-                    <span>Email</span>
-                    <span>Year</span>
-                    <span>Contact</span>
-                    <span>Rejection Reason</span>
-                  </div>
-                  {rejectedStudents.map((student) => (
-                    <div key={student.id} className="border-b border-red-200/60 last:border-b-0 bg-white/80 px-5 py-4 hover:bg-white transition-all">
-                      <div className="hidden md:grid grid-cols-[1.2fr_1.6fr_2.4fr_1fr_1fr_2fr] items-center gap-3">
-                        <div className="text-sm font-semibold text-slate-900">{student.school_id}</div>
-                        <div className="text-sm text-slate-900">{student.first_name} {student.last_name}</div>
-                        <div className="text-sm text-slate-600 break-words">{student.email}</div>
-                        <div className="text-sm text-slate-700">{student.year_level}</div>
-                        <div className="text-sm text-slate-700">{student.contact_number || "N/A"}</div>
-                        <div className="text-sm text-red-700 font-medium">{student.rejection_reason || "—"}</div>
-                      </div>
-                      <div className="md:hidden space-y-1">
-                        <div className="flex justify-between text-sm"><span className="text-slate-500 font-medium">School ID</span><span className="font-semibold text-slate-900">{student.school_id}</span></div>
-                        <div className="flex justify-between text-sm"><span className="text-slate-500 font-medium">Name</span><span className="text-slate-900">{student.first_name} {student.last_name}</span></div>
-                        <div className="flex justify-between text-sm"><span className="text-slate-500 font-medium">Email</span><span className="text-slate-600 break-all">{student.email}</span></div>
-                        <div className="flex justify-between text-sm"><span className="text-slate-500 font-medium">Year</span><span>{student.year_level}</span></div>
-                        <div className="mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700"><span className="font-semibold">Reason: </span>{student.rejection_reason || "—"}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "users" && (
             <div id="department-users" className="space-y-6">
               <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white/90 shadow-xl shadow-slate-200/60">
                 <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 px-6 py-6 text-white">
@@ -1725,8 +1554,8 @@ export default function DeanDashboard() {
                   <h4 className="text-lg font-bold text-slate-900">No matching users</h4>
                   <p className="text-sm text-slate-600 mt-2">Try adjusting your search terms or filter.</p>
                 </div>
-              ) : (
-                <>
+                ) : (
+                  <>
                   {visibleInstructors.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -1938,173 +1767,11 @@ export default function DeanDashboard() {
                     </div>
                   )}
                 </>
-              )}
+                )}
             </div>
-          )}
+          </div>
 
-          {activeTab === "pendingStudents" && (
-            <div id="pending-students" className="space-y-4">
 
-              {pendingStudents.length === 0 ? (
-                <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-12 border border-slate-200 shadow-lg shadow-slate-200/60 text-center">
-                  <div className="text-6xl mb-4"></div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">All Caught Up!</h3>
-                  <p className="text-slate-600">No pending student approvals at the moment.</p>
-                </div>
-              ) : (
-                <>
-                  {selectedStudents.length > 0 && (
-                    <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3">
-                      <span className="text-sm font-semibold text-emerald-800">{selectedStudents.length} student{selectedStudents.length > 1 ? 's' : ''} selected</span>
-                      <button
-                        onClick={handleBulkApprove}
-                        className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
-                      >
-                        Bulk Approve Selected
-                      </button>
-                    </div>
-                  )}
-                  <div className="rounded-2xl border border-sky-200 bg-sky-100 text-slate-800 shadow-xl shadow-sky-200/40 overflow-hidden">
-                    <div className="hidden md:grid grid-cols-[40px_1.2fr_1.6fr_2.6fr_1.2fr_1.2fr_1.2fr_120px] items-center px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-sky-800 border-b border-sky-200 bg-sky-200/70">
-                      <input
-                        type="checkbox"
-                        checked={pendingStudents.length > 0 && selectedStudents.length === pendingStudents.length}
-                        onChange={toggleSelectAll}
-                        className="h-4 w-4 rounded border-sky-300 text-sky-600"
-                      />
-                      <span>School ID</span>
-                      <span>Name</span>
-                      <span>Email</span>
-                      <span>Year</span>
-                      <span>Contact</span>
-                      <span>Status</span>
-                      <span className="text-right">Actions</span>
-                    </div>
-                    {pendingStudents.map((student) => {
-                      const importedFromCsv = student.account_source === "masterlist_import";
-                      const rec = importedFromCsv ? { found: true } : null;
-                      const hasMatch = importedFromCsv;
-                      const needsDeclaration = (student.is_transferee || student.is_irregular) && !student.declaration_verified;
-                      const canApprove = canApproveStudent(student);
-                      return (
-                        <div key={student.id} className="border-b border-sky-200/60 last:border-b-0">
-                          <div className="hidden md:grid grid-cols-[40px_1.2fr_1.6fr_2.6fr_1.2fr_1.2fr_1.2fr_120px] items-center px-5 py-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedStudents.includes(student.id)}
-                              onChange={() => toggleStudentSelection(student.id)}
-                              disabled={!canApprove}
-                              className="h-4 w-4 rounded border-sky-300 text-sky-600 disabled:opacity-30"
-                            />
-                            <div className="text-sm font-semibold text-slate-900">{student.school_id}</div>
-                            <div className="text-sm">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span>{student.first_name} {student.last_name}</span>
-                                {student.is_transferee && (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-sky-100 text-sky-700">Transferee</span>
-                                )}
-                                {student.is_irregular && (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-amber-100 text-amber-700">Irregular</span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-sm text-slate-600 break-words pr-2">{student.email}</div>
-                            <div className="text-sm">{student.year_level}</div>
-                            <div className="text-sm">{student.contact_number || 'N/A'}</div>
-                            <div className="flex items-center gap-2">
-                              {!rec && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-slate-100 text-slate-500">Checking</span>}
-                              {rec && !rec.found && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-red-100 text-red-700">No Record</span>}
-                              {rec && rec.found && !hasMatch && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-amber-100 text-amber-700">Mismatch</span>}
-                              {importedFromCsv && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-sky-100 text-sky-700">Imported</span>}
-                              {!importedFromCsv && !student.id_photo && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-slate-100 text-slate-500">No ID Photo</span>}
-                              {!importedFromCsv && student.id_photo && !student.id_verified && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-amber-100 text-amber-700">ID Pending</span>}
-                              {rec && rec.found && hasMatch && needsDeclaration && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-amber-100 text-amber-700">Declaration</span>}
-                              {rec && rec.found && hasMatch && student.id_verified && !needsDeclaration && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-emerald-100 text-emerald-700">Ready</span>}
-                            </div>
-                            <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => handleViewStudentDetails(student)} className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-white border border-sky-200 text-sky-700 hover:bg-sky-50 transition-all" title="View Details">
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                              </button>
-                              <button onClick={() => openRejectModal(student.id)} className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-white border border-red-200 text-red-600 hover:bg-red-50 transition-all" title="Reject">
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                              </button>
-                              {canApprove ? (
-                                <button onClick={() => handleApproveStudent(student.id)} className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-all" title="Approve">
-                                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                </button>
-                              ) : (
-                                <div className="h-9 w-9" />
-                              )}
-                            </div>
-                          </div>
-                          {/* Mobile layout */}
-                          <div className="md:hidden p-4 space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-slate-500 font-medium">School ID</span>
-                              <span className="font-semibold text-slate-900">{student.school_id}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-slate-500 font-medium">Name</span>
-                              <span className="text-slate-900 text-right">{student.first_name} {student.last_name}</span>
-                            </div>
-                            {(student.is_transferee || student.is_irregular) && (
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-500 font-medium">Status</span>
-                                <span className="flex items-center gap-2">
-                                  {student.is_transferee && (
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-sky-100 text-sky-700">Transferee</span>
-                                  )}
-                                  {student.is_irregular && (
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-amber-100 text-amber-700">Irregular</span>
-                                  )}
-                                </span>
-                              </div>
-                            )}
-                            <div className="flex justify-between text-sm">
-                              <span className="text-slate-500 font-medium">Email</span>
-                              <span className="text-slate-600 break-all">{student.email}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-slate-500 font-medium">Year</span>
-                              <span className="text-slate-900">{student.year_level}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-slate-500 font-medium">Contact</span>
-                              <span className="text-slate-900">{student.contact_number || 'N/A'}</span>
-                            </div>
-                            <div className="flex items-center justify-between pt-2">
-                              <div className="flex gap-2">
-                                {!rec && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-slate-100 text-slate-500">Checking</span>}
-                                {rec && !rec.found && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-red-100 text-red-700">No Record</span>}
-                                {rec && rec.found && !hasMatch && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-amber-100 text-amber-700">Mismatch</span>}
-                                {rec && rec.found && hasMatch && needsDeclaration && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-amber-100 text-amber-700">Declaration</span>}
-                                {rec && rec.found && hasMatch && !needsDeclaration && <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase bg-emerald-100 text-emerald-700">Match</span>}
-                              </div>
-                              <div className="flex gap-2">
-                                <button onClick={() => handleViewStudentDetails(student)} className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-white border border-sky-200 text-sky-700" title="View Details">
-                                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                </button>
-                                <button onClick={() => openRejectModal(student.id)} className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-white border border-red-200 text-red-600" title="Reject">
-                                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                                </button>
-                                {canApprove && (
-                                  <button onClick={() => handleApproveStudent(student.id)} className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-emerald-600 text-white" title="Approve">
-                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-            </div>
           </DeanShell>
         </main>
 
@@ -2587,7 +2254,7 @@ export default function DeanDashboard() {
                       );
                     })()}
                   </div>
-                  {activeTab === "pendingStudents" && !selectedStudent.is_approved && (
+                  {!selectedStudent.is_approved && (
                     <div className="pt-2 flex gap-3">
                       <button
                         onClick={() => { setShowStudentModal(false); openRejectModal(selectedStudent.id); }}

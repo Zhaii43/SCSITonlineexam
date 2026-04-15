@@ -71,7 +71,7 @@ const masterlistColumns = [
 const flowSteps = [
   "Upload the official CSV masterlist from EDP.",
   "The system reads student identity, year, course, and subject data.",
-  "Dean reviews imported student accounts before login access is granted.",
+  "Imported students are automatically approved and notified by email.",
   "Imported subjects are reused for instructor subject assignments.",
   "Clean masterlist data keeps exam eligibility accurate.",
 ];
@@ -79,7 +79,7 @@ const flowSteps = [
 const noteItems = [
   "Use consistent course names such as BSIT so department mapping stays reliable.",
   "Keep subject labels standardized because instructor assignments and student eligibility depend on them.",
-  "Dean approval still controls whether imported students can access the system.",
+  "Students imported from the masterlist are auto-approved and receive a login email immediately.",
 ];
 
 const addFormFields = [
