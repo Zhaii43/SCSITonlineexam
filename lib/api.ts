@@ -37,6 +37,14 @@ const PROXY_PATTERNS: Array<{ match: RegExp; proxy: (url: string) => string }> =
     proxy: () => '/api/students/bulk-approve',
   },
   {
+    match: /\/api\/enrolled-records\/import\//,
+    proxy: () => '/api/enrolled-records/import',
+  },
+  {
+    match: /\/api\/enrolled-records\/sync-accounts\//,
+    proxy: () => '/api/enrolled-records/sync-accounts',
+  },
+  {
     match: /\/api\/exams\/(\d+)\/approve\//,
     proxy: (url) => url.replace(/.*\/api\/exams\/(\d+)\/approve\//, '/api/exams/$1/approve'),
   },
