@@ -37,10 +37,28 @@ type EnrolledRecord = {
 };
 
 type ImportResult = {
+  message?: string;
   error?: string;
+  import_run_id?: number;
   success_count?: number;
   error_count?: number;
+  email_sent_count?: number;
+  email_error_count?: number;
   errors?: Array<{ row: number | string; error: string }>;
+};
+
+type ImportHistoryItem = {
+  id: number;
+  filename: string;
+  status: string;
+  success_count: number;
+  error_count: number;
+  email_total: number;
+  email_sent: number;
+  email_failed: number;
+  email_pending: number;
+  created_at: string;
+  completed_at: string | null;
 };
 
 
@@ -105,6 +123,8 @@ export default function EdpDashboard() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importLoading, setImportLoading] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importHistory, setImportHistory] = useState<ImportHistoryItem[]>([]);
+  const [importHistoryLoading, setImportHistoryLoading] = useState(false);
 
   const [records, setRecords] = useState<EnrolledRecord[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(false);
@@ -133,6 +153,21 @@ export default function EdpDashboard() {
     }
   };
 
+  const fetchImportHistory = async () => {
+    setImportHistoryLoading(true);
+    try {
+      const res = await apiFetch(`${API_URL}/enrolled-records/import-history/`);
+      if (!res.ok) throw new Error("Failed to load import history.");
+      const data = await res.json();
+      setImportHistory(Array.isArray(data) ? data : []);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to load import history.";
+      toast.error(message);
+    } finally {
+      setImportHistoryLoading(false);
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (!token) { router.replace("/login"); return; }
@@ -145,6 +180,7 @@ export default function EdpDashboard() {
         if (!data.is_approved) { setError("Your account is pending approval."); setLoading(false); return; }
         setProfile(data);
         await fetchRecords("");
+        await fetchImportHistory();
         setLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load dashboard");
@@ -182,7 +218,7 @@ export default function EdpDashboard() {
       if (!res.ok) throw new Error(data.error || "Import failed");
       setImportResult(data);
       setImportFile(null);
-      toast.success(`Imported ${data.success_count || 0} entries.`);
+      toast.success(data.message || `Imported ${data.success_count || 0} entries.`);
 
       // Auto-sync after successful import, but don't mark import as failed if sync has issues.
       try {
@@ -204,6 +240,7 @@ export default function EdpDashboard() {
       } catch {
         toast.info("Import succeeded. Refresh the page to see the latest masterlist.");
       }
+      await fetchImportHistory();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Import failed";
       setImportResult({ error: message }); toast.error(message);
@@ -468,7 +505,7 @@ export default function EdpDashboard() {
                           <p className="mt-2 text-sm text-red-700">{importResult.error}</p>
                         </div>
                       ) : (
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                           <div className="rounded-2xl border border-emerald-200 bg-white/70 p-4">
                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Imported</p>
                             <p className="mt-2 text-3xl font-semibold text-slate-900">{importResult.success_count || 0}</p>
@@ -476,6 +513,14 @@ export default function EdpDashboard() {
                           <div className="rounded-2xl border border-amber-200 bg-white/70 p-4">
                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Rows with issues</p>
                             <p className="mt-2 text-3xl font-semibold text-slate-900">{importResult.error_count || 0}</p>
+                          </div>
+                          <div className="rounded-2xl border border-sky-200 bg-white/70 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700">Emails sent</p>
+                            <p className="mt-2 text-3xl font-semibold text-slate-900">{importResult.email_sent_count || 0}</p>
+                          </div>
+                          <div className="rounded-2xl border border-rose-200 bg-white/70 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-rose-700">Email failures</p>
+                            <p className="mt-2 text-3xl font-semibold text-slate-900">{importResult.email_error_count || 0}</p>
                           </div>
                         </div>
                       )}
@@ -504,6 +549,63 @@ export default function EdpDashboard() {
                     </div>
                   )}
                 </div>
+              </section>
+
+              <section className={`${cardClass} p-6`}>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Import History</p>
+                    <h2 className="mt-1 text-xl font-semibold text-slate-900">Recent masterlist imports</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={fetchImportHistory}
+                    disabled={importHistoryLoading}
+                    className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    {importHistoryLoading ? "Refreshing..." : "Refresh"}
+                  </button>
+                </div>
+                {importHistoryLoading ? (
+                  <div className="py-8 text-center text-sm text-slate-500">Loading import history...</div>
+                ) : importHistory.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-slate-500">No import history yet.</div>
+                ) : (
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                    <table className="min-w-full divide-y divide-slate-200">
+                      <thead className="bg-slate-50">
+                        <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                          <th className="px-4 py-3 font-semibold">When</th>
+                          <th className="px-4 py-3 font-semibold">File</th>
+                          <th className="px-4 py-3 font-semibold">Status</th>
+                          <th className="px-4 py-3 font-semibold">Imported</th>
+                          <th className="px-4 py-3 font-semibold">Row Errors</th>
+                          <th className="px-4 py-3 font-semibold">Emails Sent</th>
+                          <th className="px-4 py-3 font-semibold">Email Failed</th>
+                          <th className="px-4 py-3 font-semibold">Email Pending</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 bg-white">
+                        {importHistory.map((run) => (
+                          <tr key={run.id} className="text-sm text-slate-700">
+                            <td className="px-4 py-3">{new Date(run.created_at).toLocaleString()}</td>
+                            <td className="px-4 py-3">{run.filename || "Uploaded CSV"}</td>
+                            <td className="px-4 py-3">
+                              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                                {run.status.replaceAll("_", " ")}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-slate-900">{run.success_count}</td>
+                            <td className="px-4 py-3">{run.error_count}</td>
+                            <td className="px-4 py-3">{run.email_sent}</td>
+                            <td className="px-4 py-3">{run.email_failed}</td>
+                            <td className="px-4 py-3">{run.email_pending}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </section>
 
               {/* Masterlist table section */}

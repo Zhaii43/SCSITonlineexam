@@ -62,10 +62,39 @@ export async function POST(request: NextRequest) {
       ),
     );
 
-    const failedEmails = emailResults.filter((result) => result.status === "rejected").length;
+    const deliveryResults = data.email_candidates.map((candidate: {
+      to: string;
+      school_id: string;
+    }, index: number) => {
+      const result = emailResults[index];
+      if (result.status === "fulfilled") {
+        return { email: candidate.to, school_id: candidate.school_id, status: "sent" };
+      }
+      const reason = result.reason instanceof Error ? result.reason.message : "Email send failed";
+      return { email: candidate.to, school_id: candidate.school_id, status: "failed", error: reason };
+    });
+
+    const failedEmails = deliveryResults.filter((item) => item.status === "failed").length;
+    const sentEmails = deliveryResults.filter((item) => item.status === "sent").length;
+    data.email_sent_count = sentEmails;
+    data.email_error_count = failedEmails;
+
+    if (typeof data.import_run_id === "number") {
+      await fetch(`${backendUrl}/api/enrolled-records/import-history/${data.import_run_id}/email-status/`, {
+        method: "POST",
+        headers: {
+          Authorization: authorization,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ results: deliveryResults }),
+        cache: "no-store",
+      }).catch(() => null);
+    }
+
     if (failedEmails > 0) {
-      data.email_error_count = failedEmails;
       data.message = `${data.message || "Import completed."} Email delivery failed for ${failedEmails} account(s).`;
+    } else {
+      data.message = `${data.message || "Import completed."} Email delivery succeeded for ${sentEmails} account(s).`;
     }
   }
 
