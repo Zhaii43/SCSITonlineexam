@@ -572,6 +572,7 @@ export default function DeanDashboard() {
         setInstructors(d.instructors);
         setAvailableImportedSubjects(Array.isArray(d.available_subjects) ? d.available_subjects : []);
         setStats(prev => ({ ...prev, students: d.students.length, instructors: d.instructors.length }));
+        setSelectedInstructorForSubjects((prev: any) => prev ? d.instructors.find((i: any) => i.id === prev.id) || null : prev);
       }
       if (pendingStudentsRes.ok) {
         const nextPendingStudents = await pendingStudentsRes.json();

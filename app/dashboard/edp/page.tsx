@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -125,6 +124,10 @@ export default function EdpDashboard() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importHistory, setImportHistory] = useState<ImportHistoryItem[]>([]);
   const [importHistoryLoading, setImportHistoryLoading] = useState(false);
+  const [showAllHistoryModal, setShowAllHistoryModal] = useState(false);
+  const [selectedImportHistoryIds, setSelectedImportHistoryIds] = useState<number[]>([]);
+  const [deletingImportHistoryId, setDeletingImportHistoryId] = useState<number | null>(null);
+  const [bulkDeletingImportHistory, setBulkDeletingImportHistory] = useState(false);
 
   const [records, setRecords] = useState<EnrolledRecord[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(false);
@@ -165,6 +168,54 @@ export default function EdpDashboard() {
       toast.error(message);
     } finally {
       setImportHistoryLoading(false);
+    }
+  };
+
+  const handleDeleteImportHistoryItem = async (importId: number) => {
+    if (!confirm("Delete this import history record?")) return;
+    setDeletingImportHistoryId(importId);
+    try {
+      const res = await apiFetch(`${API_URL}/enrolled-records/import-history/${importId}/delete/`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Failed to delete import history.");
+        return;
+      }
+      setImportHistory((prev) => prev.filter((run) => run.id !== importId));
+      setSelectedImportHistoryIds((prev) => prev.filter((id) => id !== importId));
+      toast.success("Import history deleted.");
+    } catch {
+      toast.error("Failed to delete import history.");
+    } finally {
+      setDeletingImportHistoryId(null);
+    }
+  };
+
+  const handleBulkDeleteImportHistory = async () => {
+    if (selectedImportHistoryIds.length === 0) return;
+    if (!confirm(`Delete ${selectedImportHistoryIds.length} selected import history record(s)?`)) return;
+    setBulkDeletingImportHistory(true);
+    try {
+      const res = await apiFetch(`${API_URL}/enrolled-records/import-history/delete/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ import_ids: selectedImportHistoryIds }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Failed to delete selected history.");
+        return;
+      }
+      const deletedIds: number[] = Array.isArray(data.deleted_ids) ? data.deleted_ids : selectedImportHistoryIds;
+      setImportHistory((prev) => prev.filter((run) => !deletedIds.includes(run.id)));
+      setSelectedImportHistoryIds([]);
+      toast.success(data.message || "Selected import history deleted.");
+    } catch {
+      toast.error("Failed to delete selected history.");
+    } finally {
+      setBulkDeletingImportHistory(false);
     }
   };
 
@@ -298,6 +349,7 @@ export default function EdpDashboard() {
   ).size;
   const latestImportCount = importResult?.success_count || 0;
   const latestImportErrors = importResult?.error_count ?? importResult?.errors?.length ?? 0;
+  const recentImportHistory = importHistory.slice(0, 3);
 
   const statCards = [
     {
@@ -557,14 +609,25 @@ export default function EdpDashboard() {
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Import History</p>
                     <h2 className="mt-1 text-xl font-semibold text-slate-900">Recent masterlist imports</h2>
                   </div>
-                  <button
-                    type="button"
-                    onClick={fetchImportHistory}
-                    disabled={importHistoryLoading}
-                    className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    {importHistoryLoading ? "Refreshing..." : "Refresh"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {importHistory.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllHistoryModal(true)}
+                        className="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 transition-all hover:bg-indigo-100"
+                      >
+                        View All
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={fetchImportHistory}
+                      disabled={importHistoryLoading}
+                      className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      {importHistoryLoading ? "Refreshing..." : "Refresh"}
+                    </button>
+                  </div>
                 </div>
                 {importHistoryLoading ? (
                   <div className="py-8 text-center text-sm text-slate-500">Loading import history...</div>
@@ -583,10 +646,11 @@ export default function EdpDashboard() {
                           <th className="px-4 py-3 font-semibold">Emails Sent</th>
                           <th className="px-4 py-3 font-semibold">Email Failed</th>
                           <th className="px-4 py-3 font-semibold">Email Pending</th>
+                          <th className="px-4 py-3 font-semibold text-right">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 bg-white">
-                        {importHistory.map((run) => (
+                        {recentImportHistory.map((run) => (
                           <tr key={run.id} className="text-sm text-slate-700">
                             <td className="px-4 py-3">{new Date(run.created_at).toLocaleString()}</td>
                             <td className="px-4 py-3">{run.filename || "Uploaded CSV"}</td>
@@ -600,11 +664,26 @@ export default function EdpDashboard() {
                             <td className="px-4 py-3">{run.email_sent}</td>
                             <td className="px-4 py-3">{run.email_failed}</td>
                             <td className="px-4 py-3">{run.email_pending}</td>
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteImportHistoryItem(run.id)}
+                                disabled={deletingImportHistoryId === run.id}
+                                className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition-all hover:bg-red-50 disabled:opacity-50"
+                              >
+                                {deletingImportHistoryId === run.id ? "Deleting..." : "Delete"}
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
+                )}
+                {importHistory.length > 3 && (
+                  <p className="mt-3 text-xs text-slate-500">
+                    Showing 3 most recent records. Click <span className="font-semibold text-slate-700">View All</span> to manage full history.
+                  </p>
                 )}
               </section>
 
@@ -691,6 +770,124 @@ export default function EdpDashboard() {
                 </div>
               </div>
             </div>
+
+            {showAllHistoryModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+                <div className="w-full max-w-6xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
+                  <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-indigo-500">Import History</p>
+                      <h2 className="mt-2 text-2xl font-bold text-slate-900">All masterlist imports</h2>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAllHistoryModal(false);
+                        setSelectedImportHistoryIds([]);
+                      }}
+                      className="text-2xl leading-none text-slate-400 transition-all hover:text-slate-600"
+                      aria-label="Close import history modal"
+                    >
+                      x
+                    </button>
+                  </div>
+
+                  <div className="space-y-4 px-6 py-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          checked={importHistory.length > 0 && selectedImportHistoryIds.length === importHistory.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedImportHistoryIds(importHistory.map((run) => run.id));
+                            } else {
+                              setSelectedImportHistoryIds([]);
+                            }
+                          }}
+                        />
+                        Select all
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          {selectedImportHistoryIds.length} selected
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleBulkDeleteImportHistory}
+                          disabled={selectedImportHistoryIds.length === 0 || bulkDeletingImportHistory}
+                          className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition-all hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {bulkDeletingImportHistory ? "Deleting..." : "Delete Selected"}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="max-h-[65vh] overflow-auto rounded-2xl border border-slate-200">
+                      <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
+                          <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                            <th className="px-4 py-3 font-semibold">Select</th>
+                            <th className="px-4 py-3 font-semibold">When</th>
+                            <th className="px-4 py-3 font-semibold">File</th>
+                            <th className="px-4 py-3 font-semibold">Status</th>
+                            <th className="px-4 py-3 font-semibold">Imported</th>
+                            <th className="px-4 py-3 font-semibold">Row Errors</th>
+                            <th className="px-4 py-3 font-semibold">Emails Sent</th>
+                            <th className="px-4 py-3 font-semibold">Email Failed</th>
+                            <th className="px-4 py-3 font-semibold">Email Pending</th>
+                            <th className="px-4 py-3 font-semibold text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 bg-white">
+                          {importHistory.map((run) => (
+                            <tr key={run.id} className="text-sm text-slate-700">
+                              <td className="px-4 py-3">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                  checked={selectedImportHistoryIds.includes(run.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedImportHistoryIds((prev) => (prev.includes(run.id) ? prev : [...prev, run.id]));
+                                    } else {
+                                      setSelectedImportHistoryIds((prev) => prev.filter((id) => id !== run.id));
+                                    }
+                                  }}
+                                />
+                              </td>
+                              <td className="px-4 py-3">{new Date(run.created_at).toLocaleString()}</td>
+                              <td className="px-4 py-3">{run.filename || "Uploaded CSV"}</td>
+                              <td className="px-4 py-3">
+                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                                  {run.status.replaceAll("_", " ")}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 font-semibold text-slate-900">{run.success_count}</td>
+                              <td className="px-4 py-3">{run.error_count}</td>
+                              <td className="px-4 py-3">{run.email_sent}</td>
+                              <td className="px-4 py-3">{run.email_failed}</td>
+                              <td className="px-4 py-3">{run.email_pending}</td>
+                              <td className="px-4 py-3 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteImportHistoryItem(run.id)}
+                                  disabled={deletingImportHistoryId === run.id}
+                                  className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition-all hover:bg-red-50 disabled:opacity-50"
+                                >
+                                  {deletingImportHistoryId === run.id ? "Deleting..." : "Delete"}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
           </main>
         </EdpShell>
