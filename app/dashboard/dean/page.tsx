@@ -367,12 +367,6 @@ export default function DeanDashboard() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const openPendingStudentsQueue = () => {
-    setActiveTab("users");
-    if (typeof window === "undefined") return;
-    window.history.replaceState(null, "", `${window.location.pathname}#department-users`);
-  };
-
   const refreshDepartmentUsers = async () => {
     const token = localStorage.getItem("access_token");
     if (!token) return;
@@ -1216,27 +1210,6 @@ export default function DeanDashboard() {
                 <span className="text-sm">-&gt;</span>
               </div>
             </Link>
-            <button
-              type="button"
-              onClick={openPendingStudentsQueue}
-              className="group relative overflow-hidden rounded-2xl border border-sky-200/70 bg-gradient-to-br from-white via-white to-sky-50 p-6 shadow-[0_10px_30px_-18px_rgba(2,132,199,0.35)] transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-18px_rgba(2,132,199,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
-            >
-              <div className="pointer-events-none absolute -right-12 -top-10 h-32 w-32 rounded-full bg-sky-200/50 blur-2xl transition-all group-hover:scale-110" />
-              <div className="relative flex items-center justify-between">
-                <p className="text-slate-600 text-sm font-semibold uppercase tracking-wide">Pending Students</p>
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-sky-100 text-sky-700 ring-1 ring-sky-200/80">
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-1a4 4 0 00-5-4M9 20H2v-1a4 4 0 015-4m8-5a4 4 0 11-8 0 4 4 0 018 0zm6 4a4 4 0 10-4-4 4 4 0 004 4z" />
-                  </svg>
-                </span>
-              </div>
-              <p className="relative mt-4 text-3xl font-bold text-slate-900">{pendingStudents.length}</p>
-              <p className="relative text-xs text-slate-500">Awaiting approval</p>
-              <div className="relative mt-5 inline-flex items-center gap-2 rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white shadow-lg shadow-sky-600/30 transition-all group-hover:-translate-y-0.5">
-                Review Queue
-                <span className="text-sm">-&gt;</span>
-              </div>
-            </button>
             <Link
               href="/dashboard/dean/announcements"
               className="group relative overflow-hidden rounded-2xl border border-amber-200/70 bg-gradient-to-br from-white via-white to-amber-50 p-6 shadow-[0_10px_30px_-18px_rgba(180,83,9,0.45)] transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-18px_rgba(180,83,9,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
