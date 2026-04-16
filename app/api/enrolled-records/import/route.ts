@@ -4,6 +4,12 @@ import { sendMasterlistApprovedEmail } from "@/lib/mailer";
 
 export const runtime = "nodejs";
 const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL ?? "https://scsi-tonlineexam.vercel.app";
+type DeliveryResult = {
+  email: string;
+  school_id: string;
+  status: "sent" | "failed";
+  error?: string;
+};
 
 export async function POST(request: NextRequest) {
   const authorization = request.headers.get("authorization") ?? "";
@@ -62,7 +68,7 @@ export async function POST(request: NextRequest) {
       ),
     );
 
-    const deliveryResults = data.email_candidates.map((candidate: {
+    const deliveryResults: DeliveryResult[] = data.email_candidates.map((candidate: {
       to: string;
       school_id: string;
     }, index: number) => {
