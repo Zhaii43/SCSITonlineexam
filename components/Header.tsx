@@ -1,11 +1,11 @@
 // components/Header.tsx
 "use client";
 
-import { useState, useEffect, useSyncExternalStore } from "react";
+import React, { useState, useEffect, useSyncExternalStore } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Menu, X, LogOut, User, Settings } from "lucide-react";
+import { Menu, X, LogOut, User, Settings, HelpCircle } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { useToast } from "@/components/ToastProvider";
 import { API_URL } from "@/lib/api";
@@ -49,6 +49,7 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
   const isLoggedIn = storedIsLoggedIn;
   const userName = profileIdentity?.userName || storedUserName;
   const userRole = profileIdentity?.userRole || storedUserRole;
+  const isStudentLoggedIn = isLoggedIn && userRole === "student";
 
   useEffect(() => {
     const handleWidth = (event: Event) => {
@@ -103,10 +104,10 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
   };
 
   const navItems = [
-    { label: "About", href: "/about" },
-    { label: "Features", href: "/features" },
-    { label: "Help", href: "/help" },
+    ...(!isLoggedIn ? [{ label: "About", href: "/about" }, { label: "Features", href: "/features" }] : []),
+    ...(!isStudentLoggedIn ? [{ label: "Help", href: "/help", icon: HelpCircle }] : []),
   ];
+  const hasDesktopNav = navItems.length > 0;
   const dashboardChromeRoutes = [
     "/dashboard/teacher",
     "/exam/create",
@@ -199,51 +200,107 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
       <>
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
         {/* Glass effect background */}
-        <div className="absolute inset-0 bg-white/75 backdrop-blur-xl rounded-2xl border border-slate-200 shadow-xl shadow-slate-900/10" />
+        <div className="absolute inset-0 rounded-3xl border border-slate-200/80 bg-white/75 shadow-lg shadow-slate-900/5 backdrop-blur-xl" />
         
-        <div className="relative flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4 md:grid md:grid-cols-[auto_1fr_auto] md:items-center">
+        <div
+          className={`relative flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3.5 md:items-center ${
+            hasDesktopNav ? "md:grid md:grid-cols-[auto_1fr_auto]" : "md:flex"
+          }`}
+        >
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3">
-            <div className="relative h-10 w-10">
-              <Image
-                src="/logo.png"
-                alt="SCSIT Logo"
-                fill
-                className="object-contain"
-                priority
-              />
+          {isLoggedIn && userRole === "student" ? (
+            <div className="flex items-center gap-2.5">
+              <div className="relative h-9 w-9">
+                <Image
+                  src="/logo.png"
+                  alt="SCSIT Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              <span className="hidden sm:inline text-lg font-semibold text-slate-900 tracking-tight">
+                SCSIT Online Exam
+              </span>
+              <span className="sm:hidden text-sm font-semibold text-slate-900 tracking-tight">
+                SCSIT Exam
+              </span>
             </div>
-            <span className="hidden sm:inline text-xl font-bold text-slate-900 tracking-tight">
-              SCSIT Online Exam
-            </span>
-            <span className="sm:hidden text-base font-bold text-slate-900 tracking-tight">
-              SCSIT Exam
-            </span>
-          </Link>
+          ) : (
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="relative h-9 w-9">
+                <Image
+                  src="/logo.png"
+                  alt="SCSIT Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              <span className="hidden sm:inline text-lg font-semibold text-slate-900 tracking-tight">
+                SCSIT Online Exam
+              </span>
+              <span className="sm:hidden text-sm font-semibold text-slate-900 tracking-tight">
+                SCSIT Exam
+              </span>
+            </Link>
+          )}
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center justify-self-center gap-8">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+          {hasDesktopNav && (
+            <nav className="hidden md:flex items-center justify-self-center gap-7">
+              {navItems.map((item) => {
+                const Icon = (item as { label: string; href: string; icon?: React.ElementType }).icon;
+                const isStudent = isLoggedIn && userRole === "student";
+                return Icon && isStudent ? (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-900"
+                  >
+                    <Icon size={18} className="text-slate-500" />
+                    {item.label}
+                  </Link>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="text-sm font-medium tracking-wide text-slate-600 transition-colors hover:text-slate-900"
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
 
           {/* Auth buttons / User menu - desktop */}
-          <div className="hidden md:flex items-center justify-self-end gap-3">
+          <div className="hidden md:flex items-center justify-self-end gap-2">
             {!mounted ? (
               <div className="h-10 w-56 rounded-xl bg-slate-100 border border-slate-200" />
             ) : isLoggedIn ? (
               <>
-                <NotificationBell />
+                {isStudentLoggedIn ? (
+                  <div className="inline-flex items-center gap-2">
+                    <NotificationBell
+                      buttonClassName="!h-9 !w-9 rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm hover:-translate-y-0.5 hover:border-slate-300 hover:bg-sky-50 hover:text-sky-600"
+                      iconSize={19}
+                    />
+                    <Link
+                      href="/help"
+                      aria-label="Help"
+                      title="Help"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-sky-50 hover:text-sky-600"
+                    >
+                      <HelpCircle size={19} />
+                    </Link>
+                  </div>
+                ) : (
+                  <NotificationBell />
+                )}
                 <Link
                   href={getDashboardLink()}
-                  className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-900"
+                  className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3.5 text-[13px] font-semibold tracking-wide text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-900"
                 >
                   Dashboard
                 </Link>
@@ -251,9 +308,9 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
                 <div className="relative">
                   <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition-all hover:-translate-y-0.5 hover:bg-slate-800"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 text-[13px] font-semibold tracking-wide text-white shadow-md shadow-slate-900/15 transition-all hover:-translate-y-0.5 hover:bg-slate-800"
                   >
-                    <User size={16} />
+                    <User size={14} />
                     <span>{userName}</span>
                   </button>
 
@@ -296,10 +353,10 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
           </div>
 
           {/* Mobile actions */}
-          <div className="md:hidden flex items-center gap-2">
-            {isLoggedIn && <NotificationBell />}
+          <div className="md:hidden flex items-center gap-1.5">
+            {isLoggedIn && <NotificationBell buttonClassName="hover:bg-sky-100/70" iconSize={19} />}
             <button
-              className="text-slate-700 p-2 rounded-xl border border-slate-200 bg-white/80 shadow-sm"
+              className="rounded-xl border border-slate-200 bg-white/80 p-2 text-slate-700 shadow-sm"
               onClick={() => setIsMobileOpen(!isMobileOpen)}
               aria-label="Toggle menu"
             >
@@ -313,21 +370,45 @@ export default function Header({ variant: _variant = "default" }: HeaderProps) {
       {isMobileOpen && (
         <div className="md:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-xl">
           <div className="px-5 py-6 space-y-4">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="block py-2 text-base font-semibold text-slate-700 hover:text-slate-900 transition-colors"
-                onClick={() => setIsMobileOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {navItems.map((item) => {
+              const Icon = (item as { label: string; href: string; icon?: React.ElementType }).icon;
+              const isStudent = isLoggedIn && userRole === "student";
+              return Icon && isStudent ? (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center gap-2 py-3 px-4 text-base font-semibold text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+                  onClick={() => setIsMobileOpen(false)}
+                >
+                  <Icon size={18} className="text-slate-500" />
+                  {item.label}
+                </Link>
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="block py-2 text-base font-semibold text-slate-700 hover:text-slate-900 transition-colors"
+                  onClick={() => setIsMobileOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
 
             <div className="border-t border-slate-200 my-4" />
 
             {isLoggedIn ? (
               <>
+                {isStudentLoggedIn && (
+                  <Link
+                    href="/help"
+                    className="block py-3 px-4 text-center text-sm font-medium text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+                    onClick={() => setIsMobileOpen(false)}
+                  >
+                    <HelpCircle size={16} />
+                    Help Center
+                  </Link>
+                )}
                 <div className="px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
                   <p className="text-sm font-semibold text-slate-900">{userName}</p>
                   <p className="text-xs text-slate-600 capitalize">{userRole}</p>

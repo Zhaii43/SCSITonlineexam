@@ -11,55 +11,29 @@ interface Announcement {
   id: number;
   title: string;
   message: string;
-  target_audience: string;
-  department: string | null;
-  year_level: string | null;
+  subject_names: string[];
   is_active: boolean;
   created_at: string;
 }
 
-const DEPARTMENTS = [
-  { value: "", label: "All Departments" },
-  { value: "BSHM", label: "BSHM - Hospitality Management" },
-  { value: "BSIT", label: "BSIT - Information Technology" },
-  { value: "BSEE", label: "BSEE - Electrical Engineering" },
-  { value: "BSBA", label: "BSBA - Business Administration" },
-  { value: "BSCRIM", label: "BSCRIM - Criminology" },
-  { value: "BSED", label: "BSED - Education" },
-  { value: "BSCE", label: "BSCE - Civil Engineering" },
-  { value: "BSChE", label: "BSChE - Chemical Engineering" },
-  { value: "BSME", label: "BSME - Mechanical Engineering" },
-  { value: "GENERAL", label: "GENERAL - General Education" },
-];
+interface SubjectAssignment {
+  id: number;
+  subject_name: string;
+  department: string;
+  is_active: boolean;
+}
 
-const AUDIENCE_LABELS: Record<string, string> = {
-  all: "Everyone",
-  student: "Students Only",
-  instructor: "Instructors Only",
-};
 
-const AUDIENCE_COLORS: Record<string, string> = {
-  all: "bg-purple-100 text-purple-700",
-  student: "bg-sky-100 text-sky-700",
-  instructor: "bg-green-100 text-green-700",
-};
-
-const YEAR_LEVELS = [
-  { value: "", label: "All Year Levels" },
-  { value: "1", label: "1st Year" },
-  { value: "2", label: "2nd Year" },
-  { value: "3", label: "3rd Year" },
-  { value: "4", label: "4th Year" },
-];
 
 export default function InstructorAnnouncementsPage() {
   const router = useRouter();
   const toast = useToast();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [subjects, setSubjects] = useState<SubjectAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
-  const [form, setForm] = useState({ title: "", message: "", target_audience: "all", department: "", year_level: "" });
+  const [form, setForm] = useState({ title: "", message: "", subject_name: "", apply_to_all: false });
   const [formError, setFormError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
 
@@ -72,8 +46,26 @@ export default function InstructorAnnouncementsPage() {
       router.push("/login");
       return;
     }
+    fetchSubjects(token);
     fetchAnnouncements(token);
   }, [router]);
+
+  const fetchSubjects = async (token?: string) => {
+    const currentToken = token || localStorage.getItem("access_token");
+    if (!currentToken) return;
+
+    try {
+      const res = await fetch(`/api/user/subject-assignments/`, {
+        headers: { Authorization: `Bearer ${currentToken}` },
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && Array.isArray(data?.assignments)) {
+        setSubjects(data.assignments.filter((s: SubjectAssignment) => s.is_active));
+      }
+    } catch (error) {
+      console.error("Failed to load subjects:", error);
+    }
+  };
 
   const fetchAnnouncements = async (token?: string) => {
     const currentToken = token || localStorage.getItem("access_token");
@@ -102,6 +94,7 @@ export default function InstructorAnnouncementsPage() {
     if (!form.message.trim()) return "Message is required.";
     if (form.title.trim().length < 6) return "Title should be at least 6 characters.";
     if (form.message.trim().length < 12) return "Message should be at least 12 characters.";
+    if (!form.apply_to_all && !form.subject_name) return "Please select a subject or apply to all subjects.";
     return null;
   };
 
@@ -120,16 +113,15 @@ export default function InstructorAnnouncementsPage() {
         body: JSON.stringify({
           title: form.title.trim(),
           message: form.message.trim(),
-          target_audience: form.target_audience,
-          department: form.department || null,
-          year_level: form.target_audience !== 'instructor' ? (form.year_level || null) : null,
+          subject_name: form.apply_to_all ? null : form.subject_name,
+          apply_to_all: form.apply_to_all,
         }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         throw new Error(data?.error || "Failed to post announcement.");
       }
-      setForm({ title: "", message: "", target_audience: "all", department: "", year_level: "" });
+      setForm({ title: "", message: "", subject_name: "", apply_to_all: false });
       setFormError(null);
       toast.success("Announcement posted successfully.");
       await fetchAnnouncements(token || undefined);
@@ -276,56 +268,40 @@ export default function InstructorAnnouncementsPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <label htmlFor="teacher-announcement-audience" className="mb-1 block text-sm font-medium text-slate-700">Target Audience</label>
-                    <select
-                      id="teacher-announcement-audience"
-                      value={form.target_audience}
-                      onChange={(e) => setForm((prev) => ({ ...prev, target_audience: e.target.value, year_level: "" }))}
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                    >
-                      <option value="all">Everyone</option>
-                      <option value="student">Students Only</option>
-                      <option value="instructor">Instructors Only</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="teacher-announcement-department" className="mb-1 block text-sm font-medium text-slate-700">Department</label>
-                    <select
-                      id="teacher-announcement-department"
-                      value={form.department}
-                      onChange={(e) => setForm((prev) => ({ ...prev, department: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                    >
-                      {DEPARTMENTS.map((department) => (
-                        <option key={department.value} value={department.value}>{department.label}</option>
-                      ))}
-                    </select>
-                  </div>
+                <div>
+                  <label htmlFor="teacher-announcement-subject" className="mb-1 block text-sm font-medium text-slate-700">Subject</label>
+                  <select
+                    id="teacher-announcement-subject"
+                    value={form.subject_name}
+                    onChange={(e) => setForm((prev) => ({ ...prev, subject_name: e.target.value }))}
+                    disabled={form.apply_to_all}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Select a subject</option>
+                    {subjects.map((subject) => (
+                      <option key={subject.id} value={subject.subject_name}>{subject.subject_name}</option>
+                    ))}
+                  </select>
                 </div>
 
-                {form.target_audience !== "instructor" && (
-                  <div>
-                    <label htmlFor="teacher-announcement-year-level" className="mb-1 block text-sm font-medium text-slate-700">Year Level <span className="text-slate-400 font-normal">(students)</span></label>
-                    <select
-                      id="teacher-announcement-year-level"
-                      value={form.year_level}
-                      onChange={(e) => setForm((prev) => ({ ...prev, year_level: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                    >
-                      {YEAR_LEVELS.map((yl) => (
-                        <option key={yl.value} value={yl.value}>{yl.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="teacher-announcement-apply-all"
+                    checked={form.apply_to_all}
+                    onChange={(e) => setForm((prev) => ({ ...prev, apply_to_all: e.target.checked, subject_name: e.target.checked ? "" : prev.subject_name }))}
+                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-2 focus:ring-slate-200"
+                  />
+                  <label htmlFor="teacher-announcement-apply-all" className="text-sm font-medium text-slate-700 cursor-pointer">
+                    Apply to all my subjects
+                  </label>
+                </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                   <button
                     type="button"
                     onClick={() => {
-                      setForm({ title: "", message: "", target_audience: "all", department: "", year_level: "" });
+                      setForm({ title: "", message: "", subject_name: "", apply_to_all: false });
                       setFormError(null);
                     }}
                     className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -407,17 +383,15 @@ export default function InstructorAnnouncementsPage() {
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 flex-1">
                           <div className="mb-2 flex flex-wrap items-center gap-2">
-                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${AUDIENCE_COLORS[announcement.target_audience]}`}>
-                              {AUDIENCE_LABELS[announcement.target_audience]}
-                            </span>
-                            {announcement.department && (
-                              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                                {announcement.department}
-                              </span>
-                            )}
-                            {announcement.year_level && (
-                              <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700">
-                                {YEAR_LEVELS.find((yl) => yl.value === announcement.year_level)?.label ?? `Year ${announcement.year_level}`}
+                            {announcement.subject_names && announcement.subject_names.length > 0 ? (
+                              announcement.subject_names.map((subject, idx) => (
+                                <span key={idx} className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-700">
+                                  {subject}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="rounded-full bg-purple-100 px-2.5 py-1 text-xs font-semibold text-purple-700">
+                                All Subjects
                               </span>
                             )}
                             <span className="text-xs text-slate-400">{getTimeAgo(announcement.created_at)}</span>

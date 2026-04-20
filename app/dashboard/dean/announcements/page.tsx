@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import DeanShell from "@/components/DeanShell";
 import { useToast } from "@/components/ToastProvider";
+import { API_URL } from "@/lib/api";
 
 interface Announcement {
   id: number;
@@ -17,32 +18,6 @@ interface Announcement {
   is_active: boolean;
   created_at: string;
 }
-
-const DEPARTMENTS = [
-  { value: "", label: "All Departments" },
-  { value: "BSHM", label: "BSHM - Hospitality Management" },
-  { value: "BSIT", label: "BSIT - Information Technology" },
-  { value: "BSEE", label: "BSEE - Electrical Engineering" },
-  { value: "BSBA", label: "BSBA - Business Administration" },
-  { value: "BSCRIM", label: "BSCRIM - Criminology" },
-  { value: "BSED", label: "BSED - Education" },
-  { value: "BSCE", label: "BSCE - Civil Engineering" },
-  { value: "BSChE", label: "BSChE - Chemical Engineering" },
-  { value: "BSME", label: "BSME - Mechanical Engineering" },
-  { value: "GENERAL", label: "GENERAL - General Education" },
-];
-
-const AUDIENCE_LABELS: Record<string, string> = {
-  all: "Everyone",
-  student: "Students Only",
-  instructor: "Instructors Only",
-};
-
-const AUDIENCE_COLORS: Record<string, string> = {
-  all: "bg-purple-100 text-purple-700",
-  student: "bg-sky-100 text-sky-700",
-  instructor: "bg-green-100 text-green-700",
-};
 
 const YEAR_LEVELS = [
   { value: "", label: "All Year Levels" },
@@ -59,7 +34,8 @@ export default function DeanAnnouncementsPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
-  const [form, setForm] = useState({ title: "", message: "", target_audience: "all", department: "", year_level: "" });
+  const [form, setForm] = useState({ title: "", message: "", year_level: "" });
+  const [deanDepartment, setDeanDepartment] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
 
@@ -72,8 +48,25 @@ export default function DeanAnnouncementsPage() {
       router.push("/login");
       return;
     }
+    fetchDeanDepartment(token);
     fetchAnnouncements(token);
   }, [router]);
+
+  const fetchDeanDepartment = async (token?: string) => {
+    const currentToken = token || localStorage.getItem("access_token");
+    if (!currentToken) return;
+    try {
+      const res = await fetch(`${API_URL}/profile/`, {
+        headers: { Authorization: `Bearer ${currentToken}` },
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && typeof data?.department === "string") {
+        setDeanDepartment(data.department);
+      }
+    } catch {
+      // Keep form functional even if profile lookup fails.
+    }
+  };
 
   const fetchAnnouncements = async (token?: string) => {
     const currentToken = token || localStorage.getItem("access_token");
@@ -120,16 +113,14 @@ export default function DeanAnnouncementsPage() {
         body: JSON.stringify({
           title: form.title.trim(),
           message: form.message.trim(),
-          target_audience: form.target_audience,
-          department: form.department.trim() || null,
-          year_level: form.target_audience !== 'instructor' ? (form.year_level || null) : null,
+          year_level: form.year_level || null,
         }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         throw new Error(data?.error || "Failed to post announcement.");
       }
-      setForm({ title: "", message: "", target_audience: "all", department: "", year_level: "" });
+      setForm({ title: "", message: "", year_level: "" });
       setFormError(null);
       toast.success("Announcement posted successfully.");
       await fetchAnnouncements(token || undefined);
@@ -279,36 +270,16 @@ export default function DeanAnnouncementsPage() {
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
-                      <label htmlFor="dean-announcement-audience" className="mb-1 block text-sm font-medium text-slate-700">Target Audience</label>
-                      <select
-                        id="dean-announcement-audience"
-                        value={form.target_audience}
-                        onChange={(e) => setForm((prev) => ({ ...prev, target_audience: e.target.value, year_level: "" }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      >
-                        <option value="all">Everyone</option>
-                        <option value="student">Students Only</option>
-                        <option value="instructor">Instructors Only</option>
-                      </select>
+                      <p className="mb-1 block text-sm font-medium text-slate-700">Department</p>
+                      <div className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700">
+                        {deanDepartment || "Department not assigned"}
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Announcements are automatically limited to your department.
+                      </p>
                     </div>
                     <div>
-                      <label htmlFor="dean-announcement-department" className="mb-1 block text-sm font-medium text-slate-700">Department</label>
-                      <select
-                        id="dean-announcement-department"
-                        value={form.department}
-                        onChange={(e) => setForm((prev) => ({ ...prev, department: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      >
-                        {DEPARTMENTS.map((department) => (
-                          <option key={department.value} value={department.value}>{department.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {form.target_audience !== "instructor" && (
-                    <div>
-                      <label htmlFor="dean-announcement-year-level" className="mb-1 block text-sm font-medium text-slate-700">Year Level <span className="text-slate-400 font-normal">(students)</span></label>
+                      <label htmlFor="dean-announcement-year-level" className="mb-1 block text-sm font-medium text-slate-700">Year Level <span className="text-slate-400 font-normal">(students only)</span></label>
                       <select
                         id="dean-announcement-year-level"
                         value={form.year_level}
@@ -320,13 +291,13 @@ export default function DeanAnnouncementsPage() {
                         ))}
                       </select>
                     </div>
-                  )}
+                  </div>
 
                   <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                     <button
                       type="button"
                       onClick={() => {
-                        setForm({ title: "", message: "", target_audience: "all", department: "", year_level: "" });
+                        setForm({ title: "", message: "", year_level: "" });
                         setFormError(null);
                       }}
                       className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -408,9 +379,6 @@ export default function DeanAnnouncementsPage() {
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0 flex-1">
                             <div className="mb-2 flex flex-wrap items-center gap-2">
-                              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${AUDIENCE_COLORS[announcement.target_audience]}`}>
-                                {AUDIENCE_LABELS[announcement.target_audience]}
-                              </span>
                               {announcement.department && (
                                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                                   {announcement.department}

@@ -1,8 +1,7 @@
 // app/help/page.tsx
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import RoleShell from "@/components/RoleShell";
@@ -248,11 +247,40 @@ const faqs = [
   },
 ];
 
+function getRoleId(role: string) {
+  if (role === "instructor") return "instructors";
+  if (role === "dean") return "deans";
+  return "students";
+}
+
+function getRoleLabel(roleId: string) {
+  if (roleId === "instructors") return "an instructor";
+  if (roleId === "deans") return "a dean";
+  return "a student";
+}
+
 export default function Help() {
   const [activeRole, setActiveRole] = useState("students");
+  const [loggedInRoleId, setLoggedInRoleId] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [openGuideSection, setOpenGuideSection] = useState(0);
 
+  useEffect(() => {
+    const role = localStorage.getItem("user_role");
+    if (role) {
+      const id = getRoleId(role);
+      setLoggedInRoleId(id);
+      setActiveRole(id);
+    }
+  }, []);
+
+  useEffect(() => {
+    setOpenGuideSection(0);
+  }, [activeRole]);
+
+  const visibleRoles = loggedInRoleId ? roles.filter((r) => r.id === loggedInRoleId) : roles;
   const activeRoleData = roles.find((r) => r.id === activeRole)!;
+  const roleLabel = loggedInRoleId ? getRoleLabel(loggedInRoleId) : null;
 
   return (
     <div
@@ -264,6 +292,7 @@ export default function Help() {
         "--accent-soft": "#d9f5f3",
       } as React.CSSProperties}
     >
+      {/* Background decorations */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-[linear-gradient(transparent_23px,rgba(15,23,42,0.05)_24px),linear-gradient(90deg,transparent_23px,rgba(15,23,42,0.05)_24px)] bg-[size:24px_24px]" />
         <div className="absolute -top-40 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(14,165,160,0.16),transparent_65%)]" />
@@ -273,149 +302,168 @@ export default function Help() {
         <Header />
         <RoleShell>
 
-        <section className="pt-10 pb-8 px-5 sm:px-8 lg:px-12 max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-1.5 text-[11px] uppercase tracking-[0.3em] text-slate-500 mb-4">
-            We're here to help
+        {/* Hero */}
+        <section className="px-5 sm:px-8 lg:px-12 pt-10 pb-6">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-1.5 text-[11px] uppercase tracking-[0.3em] text-slate-500">
+              We&apos;re here to help
+            </div>
+            <h1 className="mb-3 text-4xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-5xl">
+              Help <span className="text-[var(--accent)]">Center</span>
+            </h1>
+            <p className="mx-auto max-w-2xl text-base text-slate-600">
+              {roleLabel
+                ? `Common problems faced as ${roleLabel} when using this system.`
+                : "Browse guides and answers for every role in the SCSIT Online Exam system."}
+            </p>
           </div>
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-semibold tracking-tight leading-tight text-slate-900">
-            Help <span className="text-[var(--accent)]">Center</span>
-          </h1>
-          <p className="mt-4 text-lg text-slate-600 max-w-xl mx-auto leading-relaxed">
-            Find step-by-step guides and answers for every role in the SCSIT Online Exam system.
-          </p>
         </section>
 
-        <section className="py-8 px-5 sm:px-8 lg:px-12 max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row gap-3 mb-8 justify-center">
-            {roles.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => setActiveRole(r.id)}
-                className={`flex items-center gap-3 px-5 py-3 rounded-2xl font-semibold text-sm transition-all border ${
-                  activeRole === r.id
-                    ? "bg-slate-900 text-white border-transparent shadow-lg shadow-slate-900/20"
-                    : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                }`}
-              >
-                <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white border border-slate-200 text-slate-900">
-                  <Icon name={r.icon} className="h-4 w-4" />
-                </span>
-                <div className="text-left">
-                  <div>{r.title}</div>
-                  <div className={`text-xs font-normal ${activeRole === r.id ? "text-white/70" : "text-slate-400"}`}>{r.subtitle}</div>
-                </div>
-              </button>
-            ))}
-          </div>
+        {/* Main content */}
+        <div className="mx-auto max-w-6xl space-y-6 px-5 pb-12 sm:px-8 lg:px-12">
 
-          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
-            <div className="h-px bg-[var(--accent)]" />
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-11 h-11 rounded-full bg-white border border-slate-200 flex items-center justify-center">
+          <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+
+            {/* Common Issues */}
+            <section className="rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm sm:p-6">
+              <h2 className="mb-1 flex items-center gap-2 text-lg font-bold text-slate-900">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-soft)] text-[var(--accent)]">
+                  <Icon name="question" className="h-3.5 w-3.5" />
+                </span>
+                Common Issues
+              </h2>
+              <p className="mb-4 text-xs text-slate-500">
+                {roleLabel
+                  ? `Common problems faced as ${roleLabel} when using this system.`
+                  : "Quick fixes for the most frequently asked questions."}
+              </p>
+              <div className="space-y-2.5 lg:max-h-[620px] lg:overflow-y-auto lg:pr-1">
+                {faqs.map((faq, i) => (
+                  <div key={i} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                    <button
+                      onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                      className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-slate-50"
+                    >
+                      <span className="text-sm font-semibold text-slate-800">{faq.q}</span>
+                      <span className={`ml-4 flex-shrink-0 text-slate-400 transition-transform duration-200 ${openFaq === i ? "rotate-180" : ""}`}>
+                        <Icon name="chevron" className="h-4 w-4" />
+                      </span>
+                    </button>
+                    {openFaq === i && (
+                      <div className="px-5 pb-4 pt-1 text-sm text-slate-600 leading-relaxed border-t border-slate-100">
+                        {faq.a}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Role Guide */}
+            <section className="rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm sm:p-6">
+              {!loggedInRoleId && (
+                <div className="mb-6 flex flex-wrap gap-2">
+                  {visibleRoles.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => setActiveRole(r.id)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold border transition-all ${
+                        activeRole === r.id
+                          ? "bg-slate-900 text-white border-transparent shadow-lg shadow-slate-900/20"
+                          : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                      }`}
+                    >
+                      <Icon name={r.icon} className="h-4 w-4" />
+                      {r.title}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="mb-1 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm">
                   <Icon name={activeRoleData.icon} className="h-5 w-5" />
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">{activeRoleData.title}</h2>
-                  <p className="text-sm text-slate-500">{activeRoleData.subtitle}</p>
+                  <p className="text-xs text-slate-500">{activeRoleData.subtitle}</p>
                 </div>
               </div>
+              <p className="mb-4 text-xs text-slate-500">Open one topic at a time for a shorter, cleaner guide.</p>
 
-              <div className="grid sm:grid-cols-2 gap-5">
-                {activeRoleData.sections.map((section) => (
-                  <div key={section.title} className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                    <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                      <span className="inline-flex h-2 w-2 rounded-full bg-[var(--accent)]" />
-                      {section.title}
-                    </h3>
-                    <ol className="space-y-2">
-                      {section.steps.map((step, i) => (
-                        <li key={i} className="flex items-start gap-2.5 text-sm text-slate-600">
-                          <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-[10px] font-bold">
-                            {i + 1}
-                          </span>
-                          {step}
-                        </li>
-                      ))}
-                    </ol>
+              <div className="space-y-2.5 lg:max-h-[620px] lg:overflow-y-auto lg:pr-1">
+                {activeRoleData.sections.map((section, sectionIndex) => (
+                  <div key={section.title} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <button
+                      onClick={() => setOpenGuideSection(openGuideSection === sectionIndex ? -1 : sectionIndex)}
+                      className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-slate-50"
+                    >
+                      <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                        <span className="inline-flex h-2 w-2 rounded-full bg-[var(--accent)]" />
+                        {section.title}
+                      </span>
+                      <span className={`ml-4 flex-shrink-0 text-slate-400 transition-transform duration-200 ${openGuideSection === sectionIndex ? "rotate-180" : ""}`}>
+                        <Icon name="chevron" className="h-4 w-4" />
+                      </span>
+                    </button>
+                    {openGuideSection === sectionIndex && (
+                      <div className="border-t border-slate-100 px-5 pb-4 pt-3">
+                        <ol className="space-y-2.5">
+                          {section.steps.map((step, i) => (
+                            <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
+                              <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-bold text-white">
+                                {i + 1}
+                              </span>
+                              {step}
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-8 px-5 sm:px-8 lg:px-12 max-w-4xl mx-auto">
-          <div className="text-center mb-6">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">
-              Common <span className="text-[var(--accent)]">Issues</span>
-            </h2>
-            <p className="mt-2 text-slate-500 text-sm">Quick answers to the most frequently asked questions.</p>
+            </section>
           </div>
 
-          <div className="space-y-3">
-            {faqs.map((faq, i) => (
-              <div key={i} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 transition-colors"
-                >
-                  <span className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                    <Icon name="question" className="h-4 w-4" />
-                    {faq.q}
-                  </span>
-                  <span className={`text-slate-600 transition-transform duration-200 ${openFaq === i ? "rotate-180" : ""}`}>
-                    <Icon name="chevron" className="h-4 w-4" />
-                  </span>
-                </button>
-                {openFaq === i && (
-                  <div className="px-5 pb-4 text-sm text-slate-600 leading-relaxed border-t border-slate-200 pt-3">
-                    {faq.a}
-                  </div>
-                )}
+          {/* Support */}
+          <div className="bg-white/90 border border-slate-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[var(--accent-soft)] flex items-center justify-center">
+                <Icon name="lifebuoy" className="h-5 w-5 text-[var(--accent)]" />
               </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="py-8 px-5 sm:px-8 lg:px-12 max-w-4xl mx-auto">
-          <div className="bg-white border border-slate-200 rounded-3xl p-8 text-center shadow-sm">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Icon name="lifebuoy" className="h-5 w-5" />
-              <span className="text-sm font-semibold text-slate-700">Support</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 mb-2">Still Need Help?</h2>
-            <p className="text-slate-600 mb-5 text-base max-w-md mx-auto">
-              Our support team is ready to assist you with any issue.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-5 text-sm text-slate-600">
-              <a
-                href="https://mail.google.com/mail/?view=cm&to=SCSITonlineexam@gmail.com&su=SCSIT+Online+Exam+Help+Request"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 hover:text-slate-900 transition-colors"
-              >
-                <Icon name="mail" className="h-4 w-4" />
-                SCSITonlineexam@gmail.com
-              </a>
-              <a href="tel:+639515837769" className="flex items-center gap-2 hover:text-slate-900 transition-colors">
-                <Icon name="phone" className="h-4 w-4" />
-                +63 951 583 7769
-              </a>
+              <div>
+                <p className="font-semibold text-slate-900">Still need help?</p>
+                <p className="text-sm text-slate-500 mt-0.5">Our support team is ready to assist you.</p>
+                <div className="flex flex-wrap gap-4 mt-3 text-sm text-slate-600">
+                  <a
+                    href="https://mail.google.com/mail/?view=cm&to=SCSITonlineexam@gmail.com&su=SCSIT+Online+Exam+Help+Request"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 hover:text-slate-900 transition-colors"
+                  >
+                    <Icon name="mail" className="h-4 w-4" />
+                    SCSITonlineexam@gmail.com
+                  </a>
+                  <a href="tel:+639515837769" className="flex items-center gap-1.5 hover:text-slate-900 transition-colors">
+                    <Icon name="phone" className="h-4 w-4" />
+                    +63 951 583 7769
+                  </a>
+                </div>
+              </div>
             </div>
             <a
               href="mailto:SCSITonlineexam@gmail.com?subject=SCSIT%20Online%20Exam%20Help%20Request"
-              className="inline-flex items-center gap-2 bg-slate-900 text-white font-semibold px-6 py-2.5 rounded-full hover:-translate-y-0.5 transition-all shadow-lg shadow-slate-900/15 text-sm"
+              className="flex-shrink-0 inline-flex items-center gap-2 bg-slate-900 text-white font-semibold px-5 py-2.5 rounded-full hover:-translate-y-0.5 transition-all shadow-lg shadow-slate-900/15 text-sm"
             >
               Contact Support
             </a>
           </div>
-        </section>
 
+        </div>
         </RoleShell>
         <Footer />
       </div>
     </div>
   );
 }
-

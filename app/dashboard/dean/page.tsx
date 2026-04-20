@@ -1686,9 +1686,9 @@ export default function DeanDashboard() {
         </main>
 
         {showSubjectAssignmentsModal && selectedInstructorForSubjects && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
-              <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm sm:items-center">
+            <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
+              <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-6 py-5">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-indigo-500">Instructor Subjects</p>
                   <h2 className="mt-2 text-2xl font-bold text-slate-900">
@@ -1704,14 +1704,14 @@ export default function DeanDashboard() {
                     setSelectedInstructorForSubjects(null);
                     setSubjectNameDraft("");
                   }}
-                  className="text-2xl leading-none text-slate-400 transition-all hover:text-slate-600"
+                  className="shrink-0 text-2xl leading-none text-slate-400 transition-all hover:text-slate-600"
                   aria-label="Close subject assignments"
                 >
                   x
                 </button>
               </div>
 
-              <div className="space-y-6 px-6 py-6">
+              <div className="space-y-6 overflow-y-auto px-6 py-6">
                 <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4">
                   <div className="flex flex-col gap-3 md:flex-row md:items-end">
                     <div className="flex-1">
