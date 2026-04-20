@@ -49,6 +49,7 @@ type AnnouncementEmail = {
 };
 
 type ResultsPublishedEmail = {
+  id: number;
   examTitle: string;
   subject: string;
   score: number;
@@ -382,13 +383,14 @@ export async function sendDeanExamCreatedEmail(to: string, fullNameValue: string
 }
 
 export async function sendResultsPublishedEmail(to: string, firstName: string, result: ResultsPublishedEmail, frontendUrl: string) {
+  const resultLink = `${frontendUrl}/exam/result/${result.id}`;
   const badge = result.passed
     ? `<span style="background:#dcfce7;color:#16a34a;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">PASSED</span>`
     : `<span style="background:#fee2e2;color:#dc2626;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">FAILED</span>`;
   await sendMail(
     to,
     `Results Available: ${result.examTitle} - SCSIT Online Exam`,
-    `Hello ${firstName},\n\nYour results for '${result.examTitle}' are now available.\n\nScore: ${result.score}/${result.totalItems} (${result.percentage}%)\nResult: ${result.passed ? "PASSED" : "FAILED"}\nDate Taken: ${result.dateTaken}\n\nView results: ${frontendUrl}/dashboard/student/results`,
+    `Hello ${firstName},\n\nYour results for '${result.examTitle}' are now available.\n\nScore: ${result.score}/${result.totalItems} (${result.percentage}%)\nResult: ${result.passed ? "PASSED" : "FAILED"}\nDate Taken: ${result.dateTaken}\n\nView results: ${resultLink}`,
     layout(
       `Results: ${result.examTitle}`,
       `
@@ -402,7 +404,7 @@ export async function sendResultsPublishedEmail(to: string, firstName: string, r
         ${detailRow("Percentage", `${result.percentage}%`)}
         ${detailRow("Date Taken", result.dateTaken)}
       </table>
-      <p style="margin-top:24px;">${btn(`${frontendUrl}/dashboard/student/results`, "View Full Results")}</p>
+      <p style="margin-top:24px;">${btn(resultLink, "View Detailed Results")}</p>
     `,
     ),
   );
