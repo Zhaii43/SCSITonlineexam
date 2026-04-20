@@ -355,26 +355,23 @@ export default function EdpDashboard() {
     {
       label: "Masterlist entries",
       value: recordsLoading ? "Loading..." : String(totalRecords),
-      accent: "bg-sky-50 text-sky-700 border-sky-100",
+      accent: "bg-sky-50 text-sky-700 border-sky-200",
       note: "Live masterlist rows currently loaded in the workspace.",
+      icon: "M7 8h10M7 12h6m8-4v9a2 2 0 01-2 2H5a2 2 0 01-2-2V8",
     },
     {
       label: "Unique courses",
       value: recordsLoading ? "..." : String(uniqueCourses),
-      accent: "bg-emerald-50 text-emerald-700 border-emerald-100",
+      accent: "bg-emerald-50 text-emerald-700 border-emerald-200",
       note: "Course groupings represented in the current masterlist.",
+      icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
     },
     {
       label: "Imported this run",
       value: importLoading ? "Working..." : String(latestImportCount),
-      accent: "bg-violet-50 text-violet-700 border-violet-100",
+      accent: "bg-violet-50 text-violet-700 border-violet-200",
       note: latestImportErrors > 0 ? `${latestImportErrors} row errors need review.` : "Latest import feedback appears below the uploader.",
-    },
-    {
-      label: "Sync status",
-      value: "Auto",
-      accent: "bg-amber-50 text-amber-700 border-amber-100",
-      note: "Accounts are synced automatically on import.",
+      icon: "M5 13l4 4L19 7",
     },
   ];
 
@@ -432,16 +429,23 @@ export default function EdpDashboard() {
             </div>
 
             {/* Stat Cards */}
-            <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mb-6 rounded-3xl border border-slate-200/80 bg-white/90 backdrop-blur-xl shadow-lg shadow-slate-200/60">
+              <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-200/70">
               {statCards.map((item) => (
-                <div key={item.label} className={`${cardClass} p-5`}>
-                  <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${item.accent}`}>
-                    {item.label}
+                <div key={item.label} className="p-6 flex items-center gap-4">
+                  <div className={`h-11 w-11 rounded-2xl border flex items-center justify-center ${item.accent}`}>
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+                    </svg>
                   </div>
-                  <p className="mt-3 text-3xl font-bold text-slate-900">{item.value}</p>
-                  <p className="mt-1 text-xs text-slate-500">{item.note}</p>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">{item.label}</p>
+                    <p className="text-2xl font-semibold text-slate-900">{item.value}</p>
+                    <p className="text-xs text-slate-500">{item.note}</p>
+                  </div>
                 </div>
               ))}
+              </div>
             </div>
 
             {/* Masterlist Management */}
