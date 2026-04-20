@@ -1170,68 +1170,72 @@ export default function DeanDashboard() {
 
           <AnnouncementsBanner />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Link
-              href="/audit"
-              className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white via-white to-slate-50 p-6 shadow-[0_10px_30px_-18px_rgba(15,23,42,0.45)] transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-18px_rgba(15,23,42,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
-            >
-              <div className="pointer-events-none absolute -right-12 -top-10 h-32 w-32 rounded-full bg-slate-200/50 blur-2xl transition-all group-hover:scale-110" />
-              <div className="relative flex items-center justify-between">
-                <p className="text-slate-600 text-sm font-semibold uppercase tracking-wide">Audit Logs</p>
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-700 ring-1 ring-slate-200/70">
+          <div className="mb-8 rounded-3xl border border-slate-200/80 bg-white/90 backdrop-blur-xl shadow-lg shadow-slate-200/60">
+            <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-200/70">
+              <Link
+                href="/audit"
+                className="p-6 flex items-center gap-4 transition-colors hover:bg-slate-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+              >
+                <div className="h-11 w-11 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-700">
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6M8 6h8a2 2 0 012 2v10a2 2 0 01-2 2H8a2 2 0 01-2-2V8a2 2 0 012-2z" />
                   </svg>
-                </span>
-              </div>
-              <p className="relative mt-4 text-3xl font-bold text-slate-900">{auditCount}</p>
-              <p className="relative text-xs text-slate-500">Total Logs</p>
-              <div className="relative mt-5 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white shadow-lg shadow-slate-900/20 transition-all group-hover:-translate-y-0.5">
-                Open Audit Logs
-                <span className="text-sm">-&gt;</span>
-              </div>
-            </Link>
-            <Link
-              href="/dashboard/dean/exam-stats"
-              className="group relative overflow-hidden rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-white via-white to-emerald-50 p-6 shadow-[0_10px_30px_-18px_rgba(5,150,105,0.35)] transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-18px_rgba(5,150,105,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
-            >
-              <div className="pointer-events-none absolute -right-12 -top-10 h-32 w-32 rounded-full bg-emerald-200/50 blur-2xl transition-all group-hover:scale-110" />
-              <div className="relative flex items-center justify-between">
-                <p className="text-slate-600 text-sm font-semibold uppercase tracking-wide">Exam Stats</p>
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200/80">
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Audit Logs</p>
+                  <p className="text-2xl font-semibold text-slate-900">{auditCount}</p>
+                  <p className="text-xs text-slate-500">Total logs</p>
+                </div>
+              </Link>
+
+              <Link
+                href="/dashboard/dean/exam-stats"
+                className="p-6 flex items-center gap-4 transition-colors hover:bg-slate-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+              >
+                <div className="h-11 w-11 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                </span>
-              </div>
-              <p className="relative mt-4 text-3xl font-bold text-slate-900">{approvedExams.length}</p>
-              <p className="relative text-xs text-slate-500">Published Exams</p>
-              <div className="relative mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white shadow-lg shadow-emerald-600/30 transition-all group-hover:-translate-y-0.5">
-                View Stats
-                <span className="text-sm">-&gt;</span>
-              </div>
-            </Link>
-            <Link
-              href="/dashboard/dean/announcements"
-              className="group relative overflow-hidden rounded-2xl border border-amber-200/70 bg-gradient-to-br from-white via-white to-amber-50 p-6 shadow-[0_10px_30px_-18px_rgba(180,83,9,0.45)] transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-18px_rgba(180,83,9,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
-            >
-              <div className="pointer-events-none absolute -right-12 -top-10 h-32 w-32 rounded-full bg-amber-200/60 blur-2xl transition-all group-hover:scale-110" />
-              <div className="relative flex items-center justify-between">
-                <p className="text-slate-600 text-sm font-semibold uppercase tracking-wide">Announcements</p>
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 text-amber-700 ring-1 ring-amber-200/80">
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Published</p>
+                  <p className="text-2xl font-semibold text-slate-900">{approvedExams.length}</p>
+                  <p className="text-xs text-slate-500">Published exams</p>
+                </div>
+              </Link>
+
+              <Link
+                href="/dashboard/dean/announcements"
+                className="p-6 flex items-center gap-4 transition-colors hover:bg-slate-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+              >
+                <div className="h-11 w-11 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5h2m-1 0v14m0-14l-4 4m4-4l4 4M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H5a2 2 0 00-2 2v5a2 2 0 002 2z" />
                   </svg>
-                </span>
-              </div>
-              <p className="relative mt-4 text-3xl font-bold text-slate-900">{announcementsCount}</p>
-              <p className="relative text-xs text-slate-500">Total Posts</p>
-              <div className="relative mt-5 inline-flex items-center gap-2 rounded-full bg-amber-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white shadow-lg shadow-amber-600/30 transition-all group-hover:-translate-y-0.5">
-                Open Announcements
-                <span className="text-sm">-&gt;</span>
-              </div>
-            </Link>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Announcements</p>
+                  <p className="text-2xl font-semibold text-slate-900">{announcementsCount}</p>
+                  <p className="text-xs text-slate-500">Total posts</p>
+                </div>
+              </Link>
 
+              <Link
+                href="#department-users"
+                className="p-6 flex items-center gap-4 transition-colors hover:bg-slate-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+              >
+                <div className="h-11 w-11 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5V4H2v16h5m10 0v-3a3 3 0 00-3-3H10a3 3 0 00-3 3v3m10 0H7m8-10a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Department Users</p>
+                  <p className="text-2xl font-semibold text-slate-900">{students.length + instructors.length}</p>
+                  <p className="text-xs text-slate-500">Students and instructors</p>
+                </div>
+              </Link>
+            </div>
           </div>
 
           <div className="mb-8 relative overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white/95 via-white to-sky-50/80 backdrop-blur-xl p-6 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.45)]">
