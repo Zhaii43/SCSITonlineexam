@@ -31,7 +31,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const e = data.email_data;
     try {
       await sendResultsPublishedEmail(e.to, e.firstName, {
-        examTitle: e.examTitle, subject: e.subject,
+        id: e.id, examTitle: e.examTitle, subject: e.subject,
         score: e.score, totalItems: e.totalItems,
         percentage: e.percentage, passed: e.passed, dateTaken: e.dateTaken,
       }, FRONTEND_URL);
