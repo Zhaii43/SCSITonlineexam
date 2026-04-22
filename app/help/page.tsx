@@ -262,6 +262,7 @@ function getRoleLabel(roleId: string) {
 export default function Help() {
   const [activeRole, setActiveRole] = useState("students");
   const [loggedInRoleId, setLoggedInRoleId] = useState<string | null>(null);
+  const [isRoleResolved, setIsRoleResolved] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [openGuideSection, setOpenGuideSection] = useState(-1);
 
@@ -272,6 +273,7 @@ export default function Help() {
       setLoggedInRoleId(id);
       setActiveRole(id);
     }
+    setIsRoleResolved(true);
   }, []);
 
   useEffect(() => {
@@ -281,6 +283,16 @@ export default function Help() {
   const visibleRoles = loggedInRoleId ? roles.filter((r) => r.id === loggedInRoleId) : roles;
   const activeRoleData = roles.find((r) => r.id === activeRole)!;
   const roleLabel = loggedInRoleId ? getRoleLabel(loggedInRoleId) : null;
+  const heroDescription = !isRoleResolved
+    ? "Loading help content..."
+    : roleLabel
+      ? `Common problems faced as ${roleLabel} when using this system.`
+      : "Browse guides and answers for every role in the SCSIT Online Exam system.";
+  const faqDescription = !isRoleResolved
+    ? "Loading common issues..."
+    : roleLabel
+      ? `Common problems faced as ${roleLabel} when using this system.`
+      : "Quick fixes for the most frequently asked questions.";
 
   return (
     <div
@@ -312,9 +324,7 @@ export default function Help() {
               Help <span className="text-[var(--accent)]">Center</span>
             </h1>
             <p className="mx-auto max-w-2xl text-base text-slate-600">
-              {roleLabel
-                ? `Common problems faced as ${roleLabel} when using this system.`
-                : "Browse guides and answers for every role in the SCSIT Online Exam system."}
+              {heroDescription}
             </p>
           </div>
         </section>
@@ -333,9 +343,7 @@ export default function Help() {
                 Common Issues
               </h2>
               <p className="mb-4 text-xs text-slate-500">
-                {roleLabel
-                  ? `Common problems faced as ${roleLabel} when using this system.`
-                  : "Quick fixes for the most frequently asked questions."}
+                {faqDescription}
               </p>
               <div className="space-y-2.5 lg:max-h-[620px] lg:overflow-y-auto lg:pr-1">
                 {faqs.map((faq, i) => (
@@ -361,7 +369,7 @@ export default function Help() {
 
             {/* Role Guide */}
             <section className="rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm sm:p-6">
-              {!loggedInRoleId && (
+              {!loggedInRoleId && isRoleResolved && (
                 <div className="mb-6 flex flex-wrap gap-2">
                   {visibleRoles.map((r) => (
                     <button
