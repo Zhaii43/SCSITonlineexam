@@ -1,7 +1,7 @@
 // app/about/page.tsx
 "use client";
 
-import { useSyncExternalStore, useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
@@ -134,17 +134,6 @@ export default function About() {
     () => !!window.localStorage.getItem("access_token"),
     () => false
   );
-  const [liveStats, setLiveStats] = useState<{ total_exams: number; total_users: number } | null>(null);
-  useEffect(() => {
-    fetch("/api/stats").then(r => r.json()).then(setLiveStats).catch(() => {});
-  }, []);
-  const stats = [
-    { value: liveStats ? String(liveStats.total_exams) : "—", label: "Exams Conducted", icon: "clipboard" as IconName },
-    { value: liveStats ? String(liveStats.total_users) : "—", label: "Active Users", icon: "users" as IconName },
-    { value: "99.9%", label: "Uptime", icon: "activity" as IconName },
-    { value: "24/7", label: "Support", icon: "life-buoy" as IconName },
-  ];
-
   return (
     <div
       className="min-h-screen bg-[var(--paper)] text-[var(--ink)] overflow-x-hidden"
@@ -173,20 +162,6 @@ export default function About() {
           <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
             Building the future of fair, secure, and intelligent assessments - empowering educators to focus on teaching, not policing.
           </p>
-        </section>
-
-        <section className="py-6 px-5 sm:px-8 lg:px-12 max-w-5xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {stats.map((s) => (
-              <div key={s.label} className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm transition-all hover:-translate-y-0.5">
-                <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white text-slate-900 mb-2 border border-slate-200">
-                  <Icon name={s.icon} className="h-5 w-5" />
-                </div>
-                <div className="text-3xl font-semibold text-slate-900">{s.value}</div>
-                <p className="text-sm text-slate-500 mt-0.5">{s.label}</p>
-              </div>
-            ))}
-          </div>
         </section>
 
         <section className="py-10 px-5 sm:px-8 lg:px-12 max-w-7xl mx-auto">

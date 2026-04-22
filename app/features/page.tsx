@@ -1,7 +1,7 @@
 // app/features/page.tsx
 "use client";
 
-import { useSyncExternalStore, useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
@@ -13,12 +13,11 @@ type IconName =
   | "lock"
   | "bar-chart"
   | "folder"
-  | "key"
-  | "check"
+  | "shuffle"
+  | "refresh"
   | "building"
-  | "clipboard"
-  | "activity"
-  | "life-buoy";
+  | "bell"
+  | "shield";
 
 function Icon({ name, className }: { name: IconName; className?: string }) {
   const common = "fill-none stroke-current stroke-[1.8]";
@@ -62,17 +61,18 @@ function Icon({ name, className }: { name: IconName; className?: string }) {
           <path className={common} d="M3 6h6l2 2h10v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
         </svg>
       );
-    case "key":
+    case "shuffle":
       return (
         <svg viewBox="0 0 24 24" className={className}>
-          <circle className={common} cx="8" cy="12" r="3" />
-          <path className={common} d="M11 12h10l-2 2 2 2" />
+          <path className={common} d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
         </svg>
       );
-    case "check":
+    case "refresh":
       return (
         <svg viewBox="0 0 24 24" className={className}>
-          <path className={common} d="M20 6 9 17l-5-5" />
+          <path className={common} d="M23 4v6h-6" />
+          <path className={common} d="M1 20v-6h6" />
+          <path className={common} d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
         </svg>
       );
     case "building":
@@ -82,25 +82,17 @@ function Icon({ name, className }: { name: IconName; className?: string }) {
           <path className={common} d="M9 7h.01M9 11h.01M9 15h.01M15 7h.01M15 11h.01M15 15h.01" />
         </svg>
       );
-    case "clipboard":
+    case "bell":
       return (
         <svg viewBox="0 0 24 24" className={className}>
-          <rect className={common} x="6" y="4" width="12" height="16" rx="2" />
-          <path className={common} d="M9 4h6v3H9z" />
+          <path className={common} d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path className={common} d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
       );
-    case "activity":
+    case "shield":
       return (
         <svg viewBox="0 0 24 24" className={className}>
-          <path className={common} d="M3 12h4l2-5 4 10 2-5h6" />
-        </svg>
-      );
-    case "life-buoy":
-      return (
-        <svg viewBox="0 0 24 24" className={className}>
-          <circle className={common} cx="12" cy="12" r="9" />
-          <circle className={common} cx="12" cy="12" r="3" />
-          <path className={common} d="M4 12h3M17 12h3M12 4v3M12 17v3" />
+          <path className={common} d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6l-8-3z" />
         </svg>
       );
   }
@@ -110,60 +102,70 @@ const features = [
   {
     icon: "users" as IconName,
     title: "Role-Based Access Control",
-    desc: "Three distinct roles with tailored dashboards and permissions - students, instructors, and deans each get exactly what they need.",
-    highlights: ["Student exam dashboard", "Instructor exam creation", "Dean approval workflow", "Department-based filtering"],
+    desc: "Four distinct roles — Student, Instructor, Dean, and EDP — each with tailored dashboards and scoped permissions.",
+    highlights: ["Student exam dashboard", "Instructor exam authoring", "Dean approval & reports", "EDP enrollment management"],
   },
   {
     icon: "scan" as IconName,
-    title: "Live AI Proctoring",
-    desc: "Real-time face detection monitors students throughout the exam, capturing photos and flagging suspicious behavior automatically.",
-    highlights: ["Face detection monitoring", "Periodic photo capture", "Violation photo logging", "Identity verification"],
+    title: "Photo Proctoring",
+    desc: "Periodic photo captures during exams log start, routine checks, and violation events with optional text summaries.",
+    highlights: ["Start & periodic captures", "Violation photo logging", "Suspicious activity flags", "Text summary per capture"],
   },
   {
     icon: "zap" as IconName,
-    title: "Instant Auto-Grading",
-    desc: "MCQ and identification questions are graded the moment a student submits. Essay and enumeration support manual grading by instructors.",
-    highlights: ["MCQ auto-grading", "Identification matching", "Manual essay grading", "One-click result publish"],
+    title: "Auto-Grading & Manual Review",
+    desc: "MCQ and identification answers are graded instantly on submission. Essay and enumeration questions support instructor manual grading.",
+    highlights: ["MCQ & identification auto-grade", "Manual essay grading", "Philippine grading scale (1.00–5.00)", "One-click result publish"],
   },
   {
     icon: "lock" as IconName,
     title: "Anti-Cheating Suite",
-    desc: "Multi-layered protection including tab-switch detection, copy-paste blocking, fullscreen enforcement, and violation logging.",
-    highlights: ["Tab-switch detection", "Copy-paste blocking", "Fullscreen enforcement", "3-strike termination system"],
+    desc: "Multi-layered enforcement including tab-switch detection, copy-paste blocking, fullscreen lock, and a 3-strike termination system.",
+    highlights: ["Tab-switch detection", "Copy-paste blocking", "Fullscreen enforcement", "3-strike auto-termination"],
   },
   {
     icon: "bar-chart" as IconName,
-    title: "Rich Analytics",
-    desc: "Detailed grade distributions, per-question difficulty analysis, student performance trends, and exportable CSV reports.",
-    highlights: ["Grade distribution charts", "Per-question analysis", "Pass/fail statistics", "CSV export"],
+    title: "Analytics & Reports",
+    desc: "Grade distributions, per-question analysis, pass/fail breakdowns, and violation logs — all exportable as CSV.",
+    highlights: ["Grade distribution charts", "Per-question difficulty", "Violation & termination logs", "CSV export"],
   },
   {
     icon: "folder" as IconName,
     title: "Question Bank",
-    desc: "Build reusable question banks, import questions via CSV, randomize per session, and import directly into any exam.",
-    highlights: ["Reusable question library", "CSV bulk import", "Bank-to-exam import", "Search & filter questions"],
+    desc: "Build a reusable question library per subject, import via CSV, and pull questions directly into any exam.",
+    highlights: ["Reusable question library", "CSV bulk import", "Bank-to-exam import", "Tag & subject filtering"],
   },
   {
-    icon: "key" as IconName,
-    title: "OTP Verification",
-    desc: "Secure email-based credential flows help approved users activate access and recover passwords safely.",
-    highlights: ["Password setup email", "Password reset OTP", "Secure token handling", "Approved-user access only"],
+    icon: "shuffle" as IconName,
+    title: "Question Pooling & Shuffling",
+    desc: "Each student receives a unique randomized question set drawn from a configurable pool, with shuffled answer options.",
+    highlights: ["Per-student question pool", "Shuffled answer options", "Unique exam seed per student", "Configurable pool size"],
   },
   {
-    icon: "check" as IconName,
-    title: "Dean Approval Workflow",
-    desc: "All exams go through a dean approval process before students can access them, ensuring quality and academic integrity.",
-    highlights: ["Pending exam review queue", "Approve or reject exams", "Eligible student preview", "Approval notifications"],
+    icon: "refresh" as IconName,
+    title: "Retake Policies",
+    desc: "Instructors configure how multiple attempts are handled — keep best score, latest score, or average all attempts.",
+    highlights: ["No retake option", "Keep best score", "Keep latest score", "Average all attempts"],
   },
   {
     icon: "building" as IconName,
-    title: "Department Management",
-    desc: "Organize users and exams by department and year level, with support for 8 departments and cross-department subjects.",
-    highlights: ["8 department categories", "Year level targeting", "ALL year level option", "Department-scoped analytics"],
+    title: "Department & Enrollment Management",
+    desc: "EDP staff manage official enrollment records and masterlist imports; deans verify student registrations against them.",
+    highlights: ["10 department categories", "Masterlist CSV import", "Enrollment record sync", "Subject assignment per instructor"],
+  },
+  {
+    icon: "bell" as IconName,
+    title: "Notifications & Announcements",
+    desc: "Real-time in-app notifications and targeted announcements keep students and instructors informed at every step.",
+    highlights: ["Exam scheduled & approved alerts", "Result published notifications", "Department-targeted announcements", "WebSocket real-time delivery"],
+  },
+  {
+    icon: "shield" as IconName,
+    title: "Audit Logging",
+    desc: "Every significant action — logins, exam events, approvals, and account changes — is recorded with IP and timestamp.",
+    highlights: ["Login & logout tracking", "Exam lifecycle events", "Student approval history", "Password & email change logs"],
   },
 ];
-
-
 
 export default function Features() {
   const isLoggedIn = useSyncExternalStore(
@@ -171,17 +173,6 @@ export default function Features() {
     () => !!window.localStorage.getItem("access_token"),
     () => false
   );
-  const [liveStats, setLiveStats] = useState<{ total_exams: number; total_users: number } | null>(null);
-  useEffect(() => {
-    fetch("/api/stats").then(r => r.json()).then(setLiveStats).catch(() => {});
-  }, []);
-  const highlights = [
-    { icon: "clipboard" as IconName, value: liveStats ? String(liveStats.total_exams) : "—", label: "Exams Conducted" },
-    { icon: "users" as IconName, value: liveStats ? String(liveStats.total_users) : "—", label: "Active Users" },
-    { icon: "activity" as IconName, value: "99.9%", label: "Uptime" },
-    { icon: "life-buoy" as IconName, value: "24/7", label: "Support" },
-  ];
-
   return (
     <div
       className="min-h-screen bg-[var(--paper)] text-[var(--ink)] overflow-x-hidden"
@@ -212,26 +203,12 @@ export default function Features() {
           </p>
         </section>
 
-        <section className="py-6 px-5 sm:px-8 lg:px-12 max-w-5xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {highlights.map((s) => (
-              <div key={s.label} className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm transition-all hover:-translate-y-0.5">
-                <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white text-slate-900 mb-2 border border-slate-200">
-                  <Icon name={s.icon} className="h-5 w-5" />
-                </div>
-                <div className="text-3xl font-semibold text-slate-900">{s.value}</div>
-                <p className="text-sm text-slate-500 mt-0.5">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
         <section className="py-8 px-5 sm:px-8 lg:px-12 max-w-7xl mx-auto">
           <div className="text-center mb-8">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">
               Everything for <span className="text-[var(--accent)]">Secure Exams</span>
             </h2>
-            <p className="mt-2 text-slate-500 text-sm max-w-md mx-auto">Nine core capabilities working together seamlessly.</p>
+            <p className="mt-2 text-slate-500 text-sm max-w-md mx-auto">Eleven core capabilities working together seamlessly.</p>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -266,8 +243,8 @@ export default function Features() {
                   Join the SCSIT examination portal and experience all these features today.
                 </p>
                 <Link href="/login" className="inline-flex items-center gap-2 bg-slate-900 text-white font-semibold px-6 py-2.5 rounded-full hover:-translate-y-0.5 transition-all shadow-lg shadow-slate-900/15 text-sm">
-                    Sign In
-                  </Link>
+                  Sign In
+                </Link>
               </div>
             </div>
           </section>
@@ -278,4 +255,3 @@ export default function Features() {
     </div>
   );
 }
-

@@ -263,7 +263,7 @@ export default function Help() {
   const [activeRole, setActiveRole] = useState("students");
   const [loggedInRoleId, setLoggedInRoleId] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [openGuideSection, setOpenGuideSection] = useState(0);
+  const [openGuideSection, setOpenGuideSection] = useState(-1);
 
   useEffect(() => {
     const role = localStorage.getItem("user_role");
@@ -275,7 +275,7 @@ export default function Help() {
   }, []);
 
   useEffect(() => {
-    setOpenGuideSection(0);
+    setOpenGuideSection(-1);
   }, [activeRole]);
 
   const visibleRoles = loggedInRoleId ? roles.filter((r) => r.id === loggedInRoleId) : roles;

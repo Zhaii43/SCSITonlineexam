@@ -174,7 +174,7 @@ export default function Home() {
                     <div className="w-2.5 h-2.5 rounded-full bg-slate-200" />
                     <div className="w-2.5 h-2.5 rounded-full bg-slate-100" />
                   </div>
-                  <span className="text-sm text-slate-500 font-mono">exam-portal.scsit.edu</span>
+                  <span className="text-sm text-slate-500 font-mono">scsit-online.exam.edu</span>
                   <span className="flex items-center gap-1 text-xs text-slate-700 font-semibold">
                     <span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full animate-ping" />
                     LIVE
@@ -426,4 +426,5 @@ export default function Home() {
     </div>
   );
 }
+
 
