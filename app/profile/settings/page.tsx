@@ -115,9 +115,7 @@ export default function ProfileSettings() {
     
     try {
       const formData = new FormData();
-      formData.append("username", profileData.username);
-      formData.append("first_name", profileData.first_name);
-      formData.append("last_name", profileData.last_name);
+
       if (!emailChanged) {
         formData.append("email", profileData.email);
       }
@@ -573,9 +571,8 @@ export default function ProfileSettings() {
                         <input
                           type="text"
                           value={profileData.username}
-                          onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
-                          className="w-full px-4 py-3 border border-sky-200 rounded-xl bg-white/90 focus:ring-2 focus:ring-sky-500 text-slate-900"
-                          placeholder="Your unique username"
+                          disabled
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 cursor-not-allowed"
                         />
                       </div>
 
@@ -584,8 +581,8 @@ export default function ProfileSettings() {
                         <input
                           type="text"
                           value={profileData.first_name}
-                          onChange={(e) => setProfileData({ ...profileData, first_name: e.target.value })}
-                          className="w-full px-4 py-3 border border-sky-200 rounded-xl bg-white/90 focus:ring-2 focus:ring-sky-500 text-slate-900"
+                          disabled
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 cursor-not-allowed"
                         />
                       </div>
 
@@ -594,8 +591,8 @@ export default function ProfileSettings() {
                         <input
                           type="text"
                           value={profileData.last_name}
-                          onChange={(e) => setProfileData({ ...profileData, last_name: e.target.value })}
-                          className="w-full px-4 py-3 border border-sky-200 rounded-xl bg-white/90 focus:ring-2 focus:ring-sky-500 text-slate-900"
+                          disabled
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 cursor-not-allowed"
                         />
                       </div>
 
