@@ -139,11 +139,21 @@ export default function InstructorDashboard() {
  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
  const [hash, setHash] = useState("");
- const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => ({
-  Overview: true, Exams: true, Communication: true, Account: true, Support: false,
- }));
+ const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+  const defaults = { Overview: true, Exams: true, Communication: true, Account: true, Support: false };
+  if (typeof window === "undefined") return defaults;
+  try {
+   const saved = localStorage.getItem("sidebar_sections_instructor");
+   if (saved) return { ...defaults, ...JSON.parse(saved) };
+  } catch {}
+  return defaults;
+ });
  const toggleSection = (title: string) =>
-  setOpenSections((p) => ({ ...p, [title]: !p[title] }));
+  setOpenSections((p) => {
+   const next = { ...p, [title]: !p[title] };
+   try { localStorage.setItem("sidebar_sections_instructor", JSON.stringify(next)); } catch {}
+   return next;
+  });
  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
 
  useEffect(() => {
