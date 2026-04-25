@@ -137,6 +137,10 @@ export default function EdpDashboard() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState(initialAddForm);
   const [addLoading, setAddLoading] = useState(false);
+
+  const [editRecord, setEditRecord] = useState<EnrolledRecord | null>(null);
+  const [editForm, setEditForm] = useState(initialAddForm);
+  const [editLoading, setEditLoading] = useState(false);
   const fetchRecords = async (query?: string) => {
     const trimmedQuery = (query ?? recordSearch).trim();
     setRecordsLoading(true);
@@ -312,6 +316,29 @@ export default function EdpDashboard() {
       }
     } catch { toast.error("Failed to delete record."); }
     finally { setDeletingId(null); }
+  };
+
+  const handleEditRecord = async () => {
+    if (!editRecord) return;
+    const { school_id, first_name, last_name, year_level, course, subjects } = editForm;
+    if (!school_id || !first_name || !last_name || !year_level || !course || !subjects) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+    setEditLoading(true);
+    try {
+      const res = await apiFetch(`${API_URL}/enrolled-records/${editRecord.id}/update/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...editForm }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { toast.error(data.error || "Failed to update record."); return; }
+      toast.success("Record updated.");
+      setEditRecord(null);
+      await fetchRecords("");
+    } catch { toast.error("Failed to update record."); }
+    finally { setEditLoading(false); }
   };
 
   const handleAddRecord = async () => {
@@ -746,7 +773,7 @@ export default function EdpDashboard() {
 
                 {/* Records table */}
                 <div className="rounded-2xl border border-slate-200 bg-white/90 overflow-hidden shadow-md">
-                  <div className="hidden md:grid grid-cols-[1fr_1.4fr_0.8fr_0.8fr_1.2fr_80px] gap-4 px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500 bg-slate-50 border-b border-slate-200">
+                          <div className="grid grid-cols-[1fr_1.4fr_0.8fr_0.8fr_1.2fr_120px] gap-4 px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500 bg-slate-50 border-b border-slate-200">
                     <span>School ID</span><span>Name</span><span>Year</span><span>Course</span><span>Subjects</span><span className="text-right">Action</span>
                   </div>
                   {recordsLoading ? (
@@ -756,16 +783,43 @@ export default function EdpDashboard() {
                   ) : (
                     <div className="divide-y divide-slate-200">
                       {records.map(r => (
-                        <div key={r.id} className="grid grid-cols-1 md:grid-cols-[1fr_1.4fr_0.8fr_0.8fr_1.2fr_80px] gap-4 px-5 py-3 items-center hover:bg-slate-50 transition-all">
+                        <div key={r.id} className="grid grid-cols-1 md:grid-cols-[1fr_1.4fr_0.8fr_0.8fr_1.2fr_120px] gap-4 px-5 py-3 items-center hover:bg-slate-50 transition-all">
                           <p className="text-sm font-semibold text-black">{r.school_id}</p>
                           <p className="text-sm text-black">{r.first_name} {r.last_name}</p>
                           <p className="text-sm text-black">{r.year_level || "—"}</p>
                           <p className="text-sm text-black">{r.course || "—"}</p>
                           <p className="text-xs text-black truncate">{(r.enrolled_subjects || []).join(", ") || "—"}</p>
-                          <div className="flex justify-end">
-                            <button onClick={() => handleDeleteRecord(r.id)} disabled={deletingId === r.id} className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50">
-                              {deletingId === r.id ? "..." : "Delete"}
-                            </button>
+                          <div className="flex justify-end gap-1">
+                            <div className="relative group">
+                              <button
+                                onClick={() => { setEditRecord(r); setEditForm({ school_id: r.school_id, first_name: r.first_name, last_name: r.last_name, year_level: r.year_level, course: r.course, subjects: (r.enrolled_subjects || []).join("|"), email: r.email || "", contact_number: r.contact_number || "" }); }}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-sky-200 bg-white text-sky-700 hover:bg-sky-50 transition-all"
+                              >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                Edit
+                              </span>
+                            </div>
+                            <div className="relative group">
+                              <button
+                                onClick={() => handleDeleteRecord(r.id)}
+                                disabled={deletingId === r.id}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50 disabled:opacity-50 transition-all"
+                              >
+                                {deletingId === r.id
+                                  ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-red-300 border-t-red-600" />
+                                  : <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4M3 7h18" />
+                                    </svg>
+                                }
+                              </button>
+                              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                Delete
+                              </span>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -774,6 +828,49 @@ export default function EdpDashboard() {
                 </div>
               </div>
             </div>
+
+            {editRecord && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+                <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+                  <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-500">Masterlist</p>
+                      <h2 className="mt-1 text-xl font-semibold text-slate-900">Edit Record</h2>
+                    </div>
+                    <button onClick={() => setEditRecord(null)} className="text-2xl leading-none text-slate-400 hover:text-slate-600">×</button>
+                  </div>
+                  <div className="px-6 py-5">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {([
+                        { key: "school_id", label: "School ID *" },
+                        { key: "first_name", label: "First Name *" },
+                        { key: "last_name", label: "Last Name *" },
+                        { key: "year_level", label: "Year Level * (1st–4th)" },
+                        { key: "course", label: "Course *" },
+                        { key: "subjects", label: "Subjects * (pipe-separated)" },
+                        { key: "email", label: "Email" },
+                        { key: "contact_number", label: "Contact Number" },
+                      ] as const).map(({ key, label }) => (
+                        <div key={key} className={key === "subjects" ? "sm:col-span-2" : ""}>
+                          <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
+                          <input
+                            value={(editForm as any)[key]}
+                            onChange={e => setEditForm(prev => ({ ...prev, [key]: e.target.value }))}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-5 flex justify-end gap-2">
+                      <button onClick={() => setEditRecord(null)} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                      <button onClick={handleEditRecord} disabled={editLoading} className="rounded-xl bg-sky-600 px-5 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-50">
+                        {editLoading ? "Saving..." : "Save Changes"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {showAllHistoryModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
