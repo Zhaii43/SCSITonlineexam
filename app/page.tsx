@@ -323,9 +323,9 @@ export default function Home() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { step: "01", title: "Register", desc: "Create your account and get approved by your dean.", icon: "✍️" },
-              { step: "02", title: "Schedule", desc: "Instructors create and schedule exams for their classes.", icon: "📅" },
-              { step: "03", title: "Take Exam", desc: "Students take exams with live proctoring active.", icon: "💻" },
+              { step: "01", title: "Account Setup", desc: "EDP imports enrolled students and their accounts are created automatically.", icon: "🗂️" },
+              { step: "02", title: "Schedule Exam", desc: "Instructors create and schedule exams for their assigned classes.", icon: "📅" },
+              { step: "03", title: "Take Exam", desc: "Students log in and take exams with live proctoring active.", icon: "💻" },
               { step: "04", title: "Get Results", desc: "Auto-graded results published instantly after submission.", icon: "🏆" },
             ].map((item, i) => (
               <div key={item.step} className="relative text-center">
