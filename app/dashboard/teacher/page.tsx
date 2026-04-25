@@ -139,6 +139,11 @@ export default function InstructorDashboard() {
  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
  const [hash, setHash] = useState("");
+ const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => ({
+  Overview: true, Exams: true, Communication: true, Account: true, Support: false,
+ }));
+ const toggleSection = (title: string) =>
+  setOpenSections((p) => ({ ...p, [title]: !p[title] }));
  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
 
  useEffect(() => {
@@ -601,35 +606,44 @@ export default function InstructorDashboard() {
            ✕
           </button>
          </div>
-        <nav className="mt-3 space-y-1 text-sm px-4">
-          <Link href="/dashboard/teacher" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/dashboard/teacher")}>
-           <span className="h-2 w-2 rounded-full bg-sky-400" />
-           Dashboard
-          </Link>
-          <Link href="/dashboard/teacher#my-exams" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/dashboard/teacher#my-exams", "mt-3")}>
-           <span className="h-2 w-2 rounded-full bg-sky-400" />
-           Published Exams
-          </Link>
-          <Link href="/dashboard/teacher#active-sessions" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/dashboard/teacher#active-sessions")}>
-           <span className="h-2 w-2 rounded-full bg-sky-400" />
-           Active Sessions & Activity
-          </Link>
-          <Link href="/exam/create" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/exam/create")}>
-           <span className="h-2 w-2 rounded-full bg-sky-400" />
-           Create Exam
-          </Link>
-          <Link href="/dashboard/teacher/announcements" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/dashboard/teacher/announcements")}>
-           Announcements
-          </Link>
-          <Link href="/dashboard/teacher/reports" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/dashboard/teacher/reports")}>
-           Issue Reports
-          </Link>
-          <Link href="/profile/settings" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/profile/settings")}>
-           Profile Settings
-          </Link>
-          <Link href="/help" onClick={() => setSidebarMobileOpen(false)} className={itemClass("/help")}>
-           Help Center
-          </Link>
+        <nav className="mt-3 space-y-1 text-sm px-3">
+          {([
+           { title: "Overview", items: [{ label: "Dashboard", href: "/dashboard/teacher" }] },
+           { title: "Exams", items: [
+            { label: "Create Exam", href: "/exam/create" },
+            { label: "Published Exams", href: "/dashboard/teacher#my-exams" },
+            { label: "Active Sessions", href: "/dashboard/teacher#active-sessions" },
+           ]},
+           { title: "Communication", items: [
+            { label: "Announcements", href: "/dashboard/teacher/announcements" },
+            { label: "Issue Reports", href: "/dashboard/teacher/reports" },
+           ]},
+           { title: "Account", items: [{ label: "Profile Settings", href: "/profile/settings" }] },
+           { title: "Support", items: [{ label: "Help Center", href: "/help" }] },
+          ] as { title: string; items: { label: string; href: string }[] }[]).map((section) => (
+           <div key={section.title}>
+            <button
+             type="button"
+             onClick={() => toggleSection(section.title)}
+             className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-sky-200/90 hover:text-white transition-colors"
+            >
+             {section.title}
+             <svg className={`h-3 w-3 transition-transform duration-200 ${openSections[section.title] ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+             </svg>
+            </button>
+            {openSections[section.title] && (
+             <div className="mb-1 space-y-0.5">
+              {section.items.map((item) => (
+               <Link key={item.href} href={item.href} onClick={() => setSidebarMobileOpen(false)} className={itemClass(item.href)}>
+                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${isActive(item.href) ? "bg-white" : "bg-sky-400/50"}`} />
+                {item.label}
+               </Link>
+              ))}
+             </div>
+            )}
+           </div>
+          ))}
          </nav>
         </aside>
        </div>
@@ -657,38 +671,43 @@ export default function InstructorDashboard() {
          </div>
         </div>
         <nav className="mt-3 space-y-1 text-sm">
-         <Link href="/dashboard/teacher" className={itemClass("/dashboard/teacher")}>
-          <span className="h-2 w-2 rounded-full bg-sky-400" />
-          {!sidebarCollapsed && "Dashboard"}
-         </Link>
-          <Link href="/dashboard/teacher#my-exams" className={itemClass("/dashboard/teacher#my-exams", "mt-3")}>
-          <span className="h-2 w-2 rounded-full bg-sky-400" />
-          {!sidebarCollapsed && "Published Exams"}
-         </Link>
-         <Link href="/dashboard/teacher#active-sessions" className={itemClass("/dashboard/teacher#active-sessions")}>
-          <span className="h-2 w-2 rounded-full bg-sky-400" />
-          {!sidebarCollapsed && "Active Sessions & Activity"}
-         </Link>
-         <Link href="/exam/create" className={itemClass("/exam/create")}>
-          <span className="h-2 w-2 rounded-full bg-sky-400" />
-          {!sidebarCollapsed && "Create Exam"}
-         </Link>
-         <Link href="/dashboard/teacher/announcements" className={itemClass("/dashboard/teacher/announcements")}>
-          <span className="h-2 w-2 rounded-full bg-sky-400" />
-          {!sidebarCollapsed && "Announcements"}
-         </Link>
-         <Link href="/dashboard/teacher/reports" className={itemClass("/dashboard/teacher/reports")}>
-          <span className="h-2 w-2 rounded-full bg-sky-400" />
-          {!sidebarCollapsed && "Issue Reports"}
-         </Link>
-         <Link href="/profile/settings" className={itemClass("/profile/settings")}>
-          <span className="h-2 w-2 rounded-full bg-sky-400" />
-          {!sidebarCollapsed && "Profile Settings"}
-         </Link>
-         <Link href="/help" className={itemClass("/help")}>
-          <span className="h-2 w-2 rounded-full bg-sky-400" />
-          {!sidebarCollapsed && "Help Center"}
-         </Link>
+         {([
+          { title: "Overview", items: [{ label: "Dashboard", href: "/dashboard/teacher" }] },
+          { title: "Exams", items: [
+           { label: "Create Exam", href: "/exam/create" },
+           { label: "Published Exams", href: "/dashboard/teacher#my-exams" },
+           { label: "Active Sessions", href: "/dashboard/teacher#active-sessions" },
+          ]},
+          { title: "Communication", items: [
+           { label: "Announcements", href: "/dashboard/teacher/announcements" },
+           { label: "Issue Reports", href: "/dashboard/teacher/reports" },
+          ]},
+          { title: "Account", items: [{ label: "Profile Settings", href: "/profile/settings" }] },
+          { title: "Support", items: [{ label: "Help Center", href: "/help" }] },
+         ] as { title: string; items: { label: string; href: string }[] }[]).map((section) => (
+          <div key={section.title}>
+           <button
+            type="button"
+            onClick={() => toggleSection(section.title)}
+            className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-sky-200/90 hover:text-white transition-colors"
+           >
+            {section.title}
+            <svg className={`h-3 w-3 transition-transform duration-200 ${openSections[section.title] ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+           </button>
+           {openSections[section.title] && (
+            <div className="mb-1 space-y-0.5">
+             {section.items.map((item) => (
+              <Link key={item.href} href={item.href} className={itemClass(item.href)}>
+               <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${isActive(item.href) ? "bg-white" : "bg-sky-400/50"}`} />
+               {item.label}
+              </Link>
+             ))}
+            </div>
+           )}
+          </div>
+         ))}
         </nav>
         {!sidebarCollapsed && (
         <div className="mt-4 rounded-xl border border-sky-800/60 bg-sky-800 px-3 py-3">
